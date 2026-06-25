@@ -15,7 +15,6 @@ export function DecisionPanel({ state, dispatch }: DecisionPanelProps) {
   return (
     <section className="panel">
       <div className="panel-heading">
-        <p className="eyebrow">Alumno</p>
         <h2>Decisiones disponibles</h2>
       </div>
       <div className="decision-list">

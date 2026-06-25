@@ -1,6 +1,14 @@
 import { useState } from "react";
 import type { Dispatch } from "react";
 import { AlertTriangle, ArrowRightLeft, Clock, Play, Truck } from "lucide-react";
+
+const STATUS_ES: Record<string, string> = {
+  disponible: "Disponible",
+  asignado: "Asignado",
+  solicitado: "En ruta",
+  fuera_servicio: "Fuera de servicio",
+  desmovilizado: "Desmovilizado"
+};
 import { UnifiedCommandPanel } from "./UnifiedCommandPanel";
 import type { SimulationAction, SimulationState } from "../types/sci";
 
@@ -162,7 +170,7 @@ export function InstructorPanel({ state, dispatch }: InstructorPanelProps) {
               <div key={r.id} className="resource-demob-row">
                 <div>
                   <strong>{r.name}</strong>
-                  <span className={`res-badge status-${r.status}`}>{r.status}</span>
+                  <span className={`res-badge status-${r.status}`}>{STATUS_ES[r.status] ?? r.status}</span>
                 </div>
                 <button
                   className="small-button danger"

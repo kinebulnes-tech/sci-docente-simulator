@@ -67,7 +67,7 @@ function SimulationScreen({ config, onExit }: SimulationScreenProps) {
 
       <div className="main-grid">
         <div className="left-stack">
-          <ScenarioBoard scenario={state.scenario} selectedDecisions={state.selectedDecisions} />
+          <ScenarioBoard state={state} />
           <ObjectivePanel state={state} />
           <OrgChart
             activeRoles={state.activeRoles}

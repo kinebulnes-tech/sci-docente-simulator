@@ -1331,3 +1331,88 @@ p {
 .ics-log-entry .log-minute { flex-shrink: 0; font-weight: 700; color: var(--text-soft); min-width: 42px; }
 .ics-log-entry .log-content strong { display: block; margin-bottom: 2px; }
 .ics-log-entry .log-content p { margin: 0; color: var(--text-soft); }
+
+/* ─── 3D Scene ────────────────────────────────────────────────────────────── */
+
+.board-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 3px;
+  background: var(--surface-strong);
+}
+
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.view-toggle-btn.active {
+  background: var(--blue);
+  color: #fff;
+}
+
+.view-toggle-btn:hover:not(.active) {
+  background: var(--line);
+  color: var(--ink);
+}
+
+.scene3d-canvas {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #1a2035;
+}
+
+.scene3d-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.scene3d-fallback,
+.scene3d-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 320px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+/* HTML label injected by @react-three/drei's Html component */
+.scene-label {
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-family: inherit;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
