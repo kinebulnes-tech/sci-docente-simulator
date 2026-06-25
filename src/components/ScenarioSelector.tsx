@@ -11,7 +11,16 @@ const INCIDENT_TYPE_LABEL: Record<string, string> = {
   rescate_vehicular: "Rescate vehicular",
   matpel: "Materiales peligrosos",
   forestal: "Incendio forestal",
-  evacuacion: "Evacuación masiva"
+  evacuacion: "Evacuación masiva",
+  sar: "Búsqueda y rescate",
+  evento_masivo: "Evento masivo",
+  multiagencia: "Multiagencia"
+};
+
+const DIFFICULTY_LABEL: Record<string, string> = {
+  basico: "Básico",
+  intermedio: "Intermedio",
+  avanzado: "Avanzado"
 };
 
 export function ScenarioSelector({ onStart }: ScenarioSelectorProps) {
@@ -43,9 +52,14 @@ export function ScenarioSelector({ onStart }: ScenarioSelectorProps) {
               >
                 <div className="scenario-option-top">
                   <strong>{scenario.title}</strong>
-                  <span className="scenario-type-tag">
-                    {INCIDENT_TYPE_LABEL[scenario.type] ?? scenario.type}
-                  </span>
+                  <div className="scenario-tags">
+                    <span className="scenario-type-tag">
+                      {INCIDENT_TYPE_LABEL[scenario.type] ?? scenario.type}
+                    </span>
+                    <span className={`scenario-difficulty-tag difficulty-${scenario.difficulty}`}>
+                      {DIFFICULTY_LABEL[scenario.difficulty] ?? scenario.difficulty}
+                    </span>
+                  </div>
                 </div>
                 <p>{scenario.summary}</p>
               </button>

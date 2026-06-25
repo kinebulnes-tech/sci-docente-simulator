@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { scenarios, scenarioMap } from "../data/scenarios";
-import { structuralFireRubric } from "../data/rubrics";
 import {
   createInitialState,
   evaluateSimulation,
@@ -169,7 +168,7 @@ export function useSimulation(config: SessionConfig) {
     setFeedback(null);
   }, [scenarioId, role]);
 
-  const evaluation = useMemo(() => evaluateSimulation(state, structuralFireRubric), [state]);
+  const evaluation = useMemo(() => evaluateSimulation(state, state.scenario.rubric), [state]);
   const globalScore = useMemo(() => getGlobalScore(evaluation), [evaluation]);
 
   return {
@@ -177,7 +176,7 @@ export function useSimulation(config: SessionConfig) {
     dispatch,
     evaluation,
     globalScore,
-    rubric: structuralFireRubric,
+    rubric: state.scenario.rubric,
     role: config.role,
     feedback,
     clearFeedback,

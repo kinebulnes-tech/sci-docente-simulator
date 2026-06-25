@@ -691,6 +691,38 @@ p {
   white-space: nowrap;
 }
 
+.scenario-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.scenario-difficulty-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.scenario-difficulty-tag.difficulty-basico {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.scenario-difficulty-tag.difficulty-intermedio {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.scenario-difficulty-tag.difficulty-avanzado {
+  color: #7f1d1d;
+  background: #fee2e2;
+}
+
 .role-option-list {
   display: grid;
   grid-template-columns: 1fr 1fr;

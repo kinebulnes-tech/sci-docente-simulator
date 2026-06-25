@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { structuralFireScenario } from "../data/scenarios";
+import { structuralFireScenario, scenarios, scenarioMap } from "../data/scenarios";
 import {
   createInitialState,
   evaluateSimulation,
@@ -134,5 +134,71 @@ describe("simulationEngine", () => {
     expect(reset.minute).toBe(0);
     expect(reset.selectedDecisions).toHaveLength(0);
     expect(reset.triggeredInjects).toHaveLength(0);
+  });
+});
+
+describe("banco de escenarios", () => {
+  it("scenarioMap contiene exactamente 20 escenarios", () => {
+    expect(Object.keys(scenarioMap)).toHaveLength(20);
+  });
+
+  it("cada escenario tiene ≥10 decisiones", () => {
+    scenarios.forEach((s) => {
+      expect(s.decisions.length, `${s.id}: decisiones insuficientes`).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  it("cada escenario tiene ≥3 injects", () => {
+    scenarios.forEach((s) => {
+      expect(s.injects.length, `${s.id}: injects insuficientes`).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  it("cada escenario tiene ≥3 objetivos", () => {
+    scenarios.forEach((s) => {
+      expect(s.objectives.length, `${s.id}: objetivos insuficientes`).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  it("cada escenario tiene ≥1 error crítico", () => {
+    scenarios.forEach((s) => {
+      expect(s.criticalErrors.length, `${s.id}: sin criticalErrors`).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("todos los IDs en requires/unlocks existen en el mismo escenario", () => {
+    scenarios.forEach((s) => {
+      const ids = new Set(s.decisions.map((d) => d.id));
+      s.decisions.forEach((d) => {
+        d.requires?.forEach((r) => {
+          expect(ids.has(r), `${s.id}: requires '${r}' no existe`).toBe(true);
+        });
+        d.unlocks?.forEach((u) => {
+          expect(ids.has(u), `${s.id}: unlocks '${u}' no existe`).toBe(true);
+        });
+      });
+    });
+  });
+
+  it("todos los criticalErrors referencian decisiones válidas", () => {
+    scenarios.forEach((s) => {
+      const ids = new Set(s.decisions.map((d) => d.id));
+      s.criticalErrors.forEach((ce) => {
+        expect(ids.has(ce), `${s.id}: criticalError '${ce}' no existe`).toBe(true);
+      });
+    });
+  });
+
+  it("todos los escenarios pueden inicializarse sin error", () => {
+    scenarios.forEach((s) => {
+      expect(() => createInitialState(s), `${s.id}: falla al inicializar`).not.toThrow();
+    });
+  });
+
+  it("la rúbrica de cada escenario suma 100 puntos", () => {
+    scenarios.forEach((s) => {
+      const total = s.rubric.reduce((sum, item) => sum + item.maxPoints, 0);
+      expect(total, `${s.id}: rubric suma ${total}, no 100`).toBe(100);
+    });
   });
 });

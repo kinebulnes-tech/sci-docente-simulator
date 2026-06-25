@@ -13,7 +13,12 @@ export type IncidentType =
   | "rescate_vehicular"
   | "matpel"
   | "forestal"
-  | "evacuacion";
+  | "evacuacion"
+  | "sar"
+  | "evento_masivo"
+  | "multiagencia";
+
+export type ScenarioDifficulty = "basico" | "intermedio" | "avanzado";
 
 export type DecisionCategory =
   | "mando"
@@ -105,14 +110,19 @@ export interface Scenario {
   id: string;
   title: string;
   type: IncidentType;
+  difficulty: ScenarioDifficulty;
   summary: string;
   briefing: string;
+  learningObjectives: string[];
+  doctrinalForms: string[];
+  criticalErrors: string[];
   initialMetrics: IncidentMetric;
   objectives: ScenarioObjective[];
   resources: ScenarioResource[];
   injects: ScenarioInject[];
   decisions: ScenarioDecision[];
   hotspots: ScenarioHotspot[];
+  rubric: RubricItem[];
 }
 
 export interface TimelineEntry {
