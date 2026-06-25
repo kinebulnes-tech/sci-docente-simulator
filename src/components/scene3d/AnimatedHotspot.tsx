@@ -7,19 +7,21 @@ interface HotspotProps {
   id: string;
   kind: string;
   position: [number, number, number];
+  animated?: boolean;
 }
 
 /**
  * Fire hotspot: flickering sphere + animated smoke column.
  * Phase offset from id prevents all fires from syncing.
  */
-export function FireHotspot({ id, kind, position }: HotspotProps) {
+export function FireHotspot({ id, kind, position, animated = true }: HotspotProps) {
   const headRef = useRef<Mesh>(null);
   const smokeRef = useRef<Mesh>(null);
   const color = hotspotKindToColor(kind);
   const phase = (id.charCodeAt(0) + id.charCodeAt(id.length - 1)) * 0.37;
 
   useFrame(({ clock }) => {
+    if (!animated) return;
     const t = clock.getElapsedTime();
     if (headRef.current) {
       const s = 1 + 0.14 * Math.sin(t * 9 + phase);
@@ -59,14 +61,14 @@ export function FireHotspot({ id, kind, position }: HotspotProps) {
  * Pulse hotspot: static pin + expanding ring on the terrain.
  * Used for riesgo and victima hotspots.
  */
-export function PulseHotspot({ id, kind, position }: HotspotProps) {
+export function PulseHotspot({ id, kind, position, animated = true }: HotspotProps) {
   const ringRef = useRef<Mesh>(null);
   const color = hotspotKindToColor(kind);
   const phase = (id.charCodeAt(0) + id.charCodeAt(id.length - 1)) * 0.31;
   const CYCLE = 2.4;
 
   useFrame(({ clock }) => {
-    if (!ringRef.current) return;
+    if (!ringRef.current || !animated) return;
     const t = (clock.getElapsedTime() + phase) % CYCLE;
     ringRef.current.scale.setScalar(1 + t * 0.38);
     (ringRef.current.material as MeshLambertMaterial).opacity = Math.max(0, 1 - t / CYCLE);

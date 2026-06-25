@@ -6,6 +6,7 @@ interface SceneHotspotsProps {
   hotspots: ScenarioHotspot[];
   hasCommand: boolean;
   hasPerimeter: boolean;
+  animated?: boolean;
 }
 
 /** Static map pin — used for hotspot kinds that have no animation. */
@@ -26,7 +27,7 @@ function StaticPin({ kind, position }: { kind: string; position: [number, number
 }
 
 /** Map-pin markers for scenario hotspots + optional perimeter ring and command post. */
-export function SceneHotspots({ hotspots, hasCommand, hasPerimeter }: SceneHotspotsProps) {
+export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = true }: SceneHotspotsProps) {
   return (
     <>
       {hasPerimeter && (
@@ -40,8 +41,8 @@ export function SceneHotspots({ hotspots, hasCommand, hasPerimeter }: SceneHotsp
         const [wx, , wz] = normalizeCoords(h.x, h.y);
         const pos: [number, number, number] = [wx, 0, wz];
         const anim = hotspotAnimationType(h.kind);
-        if (anim === "fire")  return <FireHotspot  key={h.id} id={h.id} kind={h.kind} position={pos} />;
-        if (anim === "pulse") return <PulseHotspot key={h.id} id={h.id} kind={h.kind} position={pos} />;
+        if (anim === "fire")  return <FireHotspot  key={h.id} id={h.id} kind={h.kind} position={pos} animated={animated} />;
+        if (anim === "pulse") return <PulseHotspot key={h.id} id={h.id} kind={h.kind} position={pos} animated={animated} />;
         return <StaticPin key={h.id} kind={h.kind} position={pos} />;
       })}
 

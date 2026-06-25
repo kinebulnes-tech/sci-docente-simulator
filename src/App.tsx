@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
+import { BriefingPanel } from "./components/BriefingPanel";
+import { DebriefingPanel } from "./components/DebriefingPanel";
+import { DecisionLogPanel } from "./components/DecisionLogPanel";
 import { DecisionPanel } from "./components/DecisionPanel";
 import { DoctrinePanel } from "./components/DoctrinePanel";
 import { FeedbackToast } from "./components/FeedbackToast";
@@ -12,36 +15,55 @@ import { ResourcePanel } from "./components/ResourcePanel";
 import { RubricPanel } from "./components/RubricPanel";
 import { ScenarioBoard } from "./components/ScenarioBoard";
 import { ScenarioSelector } from "./components/ScenarioSelector";
-import { Timeline } from "./components/Timeline";
+import { SimulationTimeline } from "./components/SimulationTimeline";
 import { useSimulation } from "./hooks/useSimulation";
+import { scenarioMap, scenarios } from "./data/scenarios";
 import type { SessionConfig } from "./types/sci";
 
-// ─── Simulation screen (only mounted when config is set) ───────────────────
+// ─── Simulation screen ─────────────────────────────────────────────────────
 
 interface SimulationScreenProps {
   config: SessionConfig;
   onExit: () => void;
+  projector: boolean;
+  onToggleProjector: () => void;
 }
 
-function SimulationScreen({ config, onExit }: SimulationScreenProps) {
+function SimulationScreen({ config, onExit, projector, onToggleProjector }: SimulationScreenProps) {
   const {
-    state,
-    dispatch,
-    evaluation,
-    globalScore,
-    rubric,
-    role,
-    feedback,
-    clearFeedback,
-    isCompleted,
-    complete,
-    clearSession
+    state, dispatch, evaluation, globalScore, rubric, role,
+    feedback, clearFeedback, isCompleted, complete, clearSession,
+    decisionLogs, evaluationSummary, debriefingData
   } = useSimulation(config);
 
+  const [showDebriefing, setShowDebriefing] = useState(false);
   const isInstructor = role === "instructor";
 
+  // Auto-show debriefing when instructor marks complete
+  useEffect(() => {
+    if (isCompleted) setShowDebriefing(true);
+  }, [isCompleted]);
+
+  const handleRestart = useCallback(() => {
+    setShowDebriefing(false);
+    clearSession();
+  }, [clearSession]);
+
+  if (showDebriefing && isCompleted) {
+    return (
+      <DebriefingPanel
+        state={state}
+        evaluation={evaluationSummary}
+        debriefing={debriefingData}
+        logs={decisionLogs}
+        onRestart={handleRestart}
+        onExit={onExit}
+      />
+    );
+  }
+
   return (
-    <main className="app-shell">
+    <main className={`app-shell${projector ? " projector-mode" : ""}`}>
       <AppHeader
         title={state.scenario.title}
         minute={state.minute}
@@ -53,6 +75,8 @@ function SimulationScreen({ config, onExit }: SimulationScreenProps) {
         onComplete={complete}
         onReset={clearSession}
         onExit={onExit}
+        projector={projector}
+        onToggleProjector={onToggleProjector}
       />
 
       <section className="briefing-band">
@@ -104,10 +128,11 @@ function SimulationScreen({ config, onExit }: SimulationScreenProps) {
       </div>
 
       <div className={`bottom-grid${!isInstructor ? " bottom-grid--single" : ""}`}>
-        <Timeline entries={state.timeline} />
+        <SimulationTimeline entries={state.timeline} />
         {isInstructor && <DoctrinePanel />}
       </div>
 
+      {isInstructor && <DecisionLogPanel logs={decisionLogs} />}
       {isInstructor && <IcsFormViewer state={state} />}
 
       <FeedbackToast feedback={feedback} onClose={clearFeedback} />
@@ -118,11 +143,56 @@ function SimulationScreen({ config, onExit }: SimulationScreenProps) {
 // ─── Root app ──────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [config, setConfig] = useState<SessionConfig | null>(null);
+  const [pendingConfig, setPendingConfig] = useState<SessionConfig | null>(null);
+  const [activeConfig, setActiveConfig]   = useState<SessionConfig | null>(null);
+  const [projector, setProjector]         = useState(false);
 
-  if (!config) {
-    return <ScenarioSelector onStart={setConfig} />;
+  const handleStart = useCallback((cfg: SessionConfig) => setPendingConfig(cfg), []);
+
+  const handleBeginSim = useCallback(() => {
+    if (!pendingConfig) return;
+    setActiveConfig(pendingConfig);
+    setPendingConfig(null);
+  }, [pendingConfig]);
+
+  const handleExit = useCallback(() => {
+    setActiveConfig(null);
+    setPendingConfig(null);
+  }, []);
+
+  const handleBack = useCallback(() => setPendingConfig(null), []);
+
+  const toggleProjector = useCallback(() => setProjector((p) => !p), []);
+
+  // Fullscreen
+  useEffect(() => {
+    const handler = () => {};
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  if (!pendingConfig && !activeConfig) {
+    return <ScenarioSelector onStart={handleStart} />;
   }
 
-  return <SimulationScreen config={config} onExit={() => setConfig(null)} />;
+  if (pendingConfig && !activeConfig) {
+    const scenario = scenarioMap[pendingConfig.scenarioId] ?? scenarios[0];
+    return (
+      <BriefingPanel
+        scenario={scenario}
+        role={pendingConfig.role}
+        onStart={handleBeginSim}
+        onBack={handleBack}
+      />
+    );
+  }
+
+  return (
+    <SimulationScreen
+      config={activeConfig!}
+      onExit={handleExit}
+      projector={projector}
+      onToggleProjector={toggleProjector}
+    />
+  );
 }

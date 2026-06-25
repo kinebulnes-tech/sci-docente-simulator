@@ -1,5 +1,5 @@
 import type { Dispatch } from "react";
-import { CheckCircle2, LogOut, RotateCcw, TimerReset } from "lucide-react";
+import { CheckCircle2, LogOut, Maximize2, Monitor, RotateCcw, TimerReset } from "lucide-react";
 import type { IncidentStatus, SessionRole, SimulationAction } from "../types/sci";
 import { scoreLabel } from "../utils/number";
 
@@ -14,6 +14,8 @@ interface AppHeaderProps {
   onComplete: () => void;
   onReset: () => void;
   onExit: () => void;
+  projector?: boolean;
+  onToggleProjector?: () => void;
 }
 
 const STATUS_LABEL: Record<IncidentStatus, string> = {
@@ -38,7 +40,9 @@ export function AppHeader({
   dispatch,
   onComplete,
   onReset,
-  onExit
+  onExit,
+  projector = false,
+  onToggleProjector
 }: AppHeaderProps) {
   function handleReset() {
     if (!window.confirm("¿Reiniciar la simulación? Se perderá el progreso guardado.")) return;
@@ -85,6 +89,30 @@ export function AppHeader({
 
         <button className="icon-button" title="Reiniciar simulación" onClick={handleReset}>
           <RotateCcw size={18} />
+        </button>
+
+        {onToggleProjector && (
+          <button
+            className={`icon-button${projector ? " active-btn" : ""}`}
+            title={projector ? "Desactivar modo proyector" : "Modo proyector"}
+            onClick={onToggleProjector}
+          >
+            <Monitor size={18} />
+          </button>
+        )}
+
+        <button
+          className="icon-button"
+          title="Pantalla completa"
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+              document.exitFullscreen().catch(() => {});
+            }
+          }}
+        >
+          <Maximize2 size={18} />
         </button>
 
         <button className="icon-button" title="Salir al menú" onClick={onExit}>

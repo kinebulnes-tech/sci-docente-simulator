@@ -23,6 +23,7 @@ function iconFor(kind: string) {
 export function ScenarioBoard({ state }: ScenarioBoardProps) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [resetSignal, setResetSignal] = useState(0);
+  const [animated, setAnimated] = useState(true);
   const { scenario, selectedDecisions } = state;
 
   const hasCommand      = selectedDecisions.includes("asumir-mando");
@@ -57,13 +58,22 @@ export function ScenarioBoard({ state }: ScenarioBoardProps) {
               3D
             </button>
             {view === "3d" && (
-              <button
-                className="view-toggle-btn"
-                onClick={() => setResetSignal((s) => s + 1)}
-                title="Centrar cámara"
-              >
-                ⌖
-              </button>
+              <>
+                <button
+                  className="view-toggle-btn"
+                  onClick={() => setResetSignal((s) => s + 1)}
+                  title="Centrar cámara"
+                >
+                  ⌖
+                </button>
+                <button
+                  className={`view-toggle-btn ${animated ? "active" : ""}`}
+                  onClick={() => setAnimated((a) => !a)}
+                  title={animated ? "Desactivar animaciones" : "Activar animaciones"}
+                >
+                  ✦
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -111,7 +121,7 @@ export function ScenarioBoard({ state }: ScenarioBoardProps) {
               </div>
             }
           >
-            <Scene3D state={state} resetSignal={resetSignal} />
+            <Scene3D state={state} resetSignal={resetSignal} animated={animated} />
           </Suspense>
         </WebGLFallback>
       )}

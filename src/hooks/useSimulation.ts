@@ -14,6 +14,10 @@ import type {
   SimulationAction,
   SimulationState
 } from "../types/sci";
+import { DEFAULT_EVALUATION_RUBRIC } from "../data/evaluationRubrics";
+import { calculateEvaluation } from "../utils/evaluation";
+import { deduplicateLogs, deriveLogsFromTimeline, sortLogsByMinute } from "../utils/decisionLog";
+import { buildDebriefing } from "../utils/debriefing";
 
 // ─── Persistence ───────────────────────────────────────────────────────────
 
@@ -183,6 +187,21 @@ export function useSimulation(config: SessionConfig) {
   const evaluation = useMemo(() => evaluateSimulation(state, state.scenario.rubric), [state]);
   const globalScore = useMemo(() => getGlobalScore(evaluation), [evaluation]);
 
+  const decisionLogs = useMemo(
+    () => deduplicateLogs(sortLogsByMinute(deriveLogsFromTimeline(state.timeline, state.scenario.id))),
+    [state.timeline, state.scenario.id]
+  );
+
+  const evaluationSummary = useMemo(
+    () => calculateEvaluation(DEFAULT_EVALUATION_RUBRIC, decisionLogs),
+    [decisionLogs]
+  );
+
+  const debriefingData = useMemo(
+    () => buildDebriefing(state, evaluationSummary),
+    [state, evaluationSummary]
+  );
+
   return {
     state,
     dispatch,
@@ -194,6 +213,9 @@ export function useSimulation(config: SessionConfig) {
     clearFeedback,
     isCompleted,
     complete,
-    clearSession
+    clearSession,
+    decisionLogs,
+    evaluationSummary,
+    debriefingData
   };
 }

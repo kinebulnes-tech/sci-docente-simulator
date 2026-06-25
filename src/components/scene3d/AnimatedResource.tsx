@@ -6,6 +6,7 @@ import type { VisualResource } from "../../utils/scene3d";
 
 interface AnimatedResourceProps {
   resource: VisualResource;
+  animated?: boolean;
 }
 
 /**
@@ -14,13 +15,13 @@ interface AnimatedResourceProps {
  * - desmovilizado: scaled down + low opacity (static)
  * - others: static cylinder
  */
-export function AnimatedResource({ resource }: AnimatedResourceProps) {
+export function AnimatedResource({ resource, animated = true }: AnimatedResourceProps) {
   const meshRef = useRef<Mesh>(null);
   const anim = resourceAnimationType(resource.status);
   const phase = (resource.id.charCodeAt(0) + resource.id.charCodeAt(resource.id.length - 1)) * 0.41;
 
   useFrame(({ clock }) => {
-    if (!meshRef.current || anim !== "route") return;
+    if (!meshRef.current || anim !== "route" || !animated) return;
     const t = clock.getElapsedTime();
     meshRef.current.position.y = resource.position[1] + 0.09 * Math.abs(Math.sin(t * 2.8 + phase));
   });

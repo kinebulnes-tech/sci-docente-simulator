@@ -12,10 +12,11 @@ import { SceneZones } from "./SceneZones";
 interface Scene3DProps {
   state: SimulationState;
   resetSignal?: number;
+  animated?: boolean;
 }
 
 /** Isometric 3D scene — pure visual layer, SimulationState is the source of truth. */
-export function Scene3D({ state, resetSignal = 0 }: Scene3DProps) {
+export function Scene3D({ state, resetSignal = 0, animated = true }: Scene3DProps) {
   const { scenario, selectedDecisions, resources } = state;
   const hasCommand   = selectedDecisions.includes("asumir-mando");
   const hasPerimeter = selectedDecisions.includes("perimetro-evacuacion");
@@ -38,8 +39,9 @@ export function Scene3D({ state, resetSignal = 0 }: Scene3DProps) {
           hotspots={scenario.hotspots}
           hasCommand={hasCommand}
           hasPerimeter={hasPerimeter}
+          animated={animated}
         />
-        <SceneResources resources={resources} />
+        <SceneResources resources={resources} animated={animated} />
         <SceneLabels hotspots={scenario.hotspots} />
       </Canvas>
     </div>
