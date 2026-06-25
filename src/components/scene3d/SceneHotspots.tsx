@@ -1,6 +1,8 @@
 import type { ScenarioHotspot } from "../../types/sci";
 import { hasValidCoords, hotspotAnimationType, hotspotKindToColor, normalizeCoords } from "../../utils/scene3d";
 import { FireHotspot, PulseHotspot } from "./AnimatedHotspot";
+import { PriorityRing } from "./PriorityRing";
+import { SeverityGlow } from "./SeverityGlow";
 
 interface SceneHotspotsProps {
   hotspots: ScenarioHotspot[];
@@ -9,7 +11,9 @@ interface SceneHotspotsProps {
   animated?: boolean;
 }
 
-/** Static map pin — used for hotspot kinds that have no animation. */
+const CRITICAL_KINDS = new Set(["fuego", "victima"]);
+
+/** Map-pin markers for scenario hotspots + optional perimeter ring and command post. */
 function StaticPin({ kind, position }: { kind: string; position: [number, number, number] }) {
   const color = hotspotKindToColor(kind);
   return (
@@ -26,7 +30,6 @@ function StaticPin({ kind, position }: { kind: string; position: [number, number
   );
 }
 
-/** Map-pin markers for scenario hotspots + optional perimeter ring and command post. */
 export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = true }: SceneHotspotsProps) {
   return (
     <>
@@ -40,10 +43,24 @@ export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = t
       {hotspots.filter(hasValidCoords).map((h) => {
         const [wx, , wz] = normalizeCoords(h.x, h.y);
         const pos: [number, number, number] = [wx, 0, wz];
+        const glowPos: [number, number, number] = [wx, 0.55, wz];
+        const color = hotspotKindToColor(h.kind);
         const anim = hotspotAnimationType(h.kind);
-        if (anim === "fire")  return <FireHotspot  key={h.id} id={h.id} kind={h.kind} position={pos} animated={animated} />;
-        if (anim === "pulse") return <PulseHotspot key={h.id} id={h.id} kind={h.kind} position={pos} animated={animated} />;
-        return <StaticPin key={h.id} kind={h.kind} position={pos} />;
+        const isCritical = CRITICAL_KINDS.has(h.kind);
+
+        return (
+          <group key={h.id}>
+            {isCritical && (
+              <SeverityGlow position={glowPos} color={color} animated={animated} />
+            )}
+            {isCritical && (
+              <PriorityRing position={pos} color={color} animated={animated} />
+            )}
+            {anim === "fire"  && <FireHotspot  id={h.id} kind={h.kind} position={pos} animated={animated} />}
+            {anim === "pulse" && <PulseHotspot id={h.id} kind={h.kind} position={pos} animated={animated} />}
+            {anim === "none"  && <StaticPin kind={h.kind} position={pos} />}
+          </group>
+        );
       })}
 
       {hasCommand && (

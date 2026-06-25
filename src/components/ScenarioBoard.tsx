@@ -1,9 +1,12 @@
 import { lazy, Suspense, useState } from "react";
 import { Flame, MapPin, ShieldAlert, Siren, UserRoundSearch } from "lucide-react";
 import type { SimulationState } from "../types/sci";
+import type { QualityMode } from "../utils/sceneQuality";
+import { detectQualityMode } from "../utils/sceneQuality";
 import { WebGLFallback } from "./scene3d/WebGLFallback";
+import { Scene3DControls } from "./scene3d/Scene3DControls";
+import type { Scene3DState } from "./scene3d/Scene3DControls";
 
-// Lazy-load Three.js bundle — only downloaded on first 3D toggle
 const Scene3D = lazy(() =>
   import("./scene3d/Scene3D").then((m) => ({ default: m.Scene3D }))
 );
@@ -23,12 +26,28 @@ function iconFor(kind: string) {
 export function ScenarioBoard({ state }: ScenarioBoardProps) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [resetSignal, setResetSignal] = useState(0);
-  const [animated, setAnimated] = useState(true);
-  const { scenario, selectedDecisions } = state;
+  const [scene3d, setScene3d] = useState<Scene3DState>({
+    showGrid: true,
+    showLabels: true,
+    showZones: true,
+    animated: true,
+    quality: detectQualityMode(),
+    cameraPreset: "general",
+  });
 
+  const { scenario, selectedDecisions } = state;
   const hasCommand      = selectedDecisions.includes("asumir-mando");
   const hasPerimeter    = selectedDecisions.includes("perimetro-evacuacion");
   const hasExposureLine = selectedDecisions.includes("linea-exposicion");
+
+  function toggle(key: keyof Scene3DState) {
+    setScene3d((s) => ({ ...s, [key]: !s[key] }));
+  }
+
+  function handleReset() {
+    setScene3d((s) => ({ ...s, cameraPreset: "general" }));
+    setResetSignal((n) => n + 1);
+  }
 
   return (
     <section className="scenario-board">
@@ -57,27 +76,22 @@ export function ScenarioBoard({ state }: ScenarioBoardProps) {
             >
               3D
             </button>
-            {view === "3d" && (
-              <>
-                <button
-                  className="view-toggle-btn"
-                  onClick={() => setResetSignal((s) => s + 1)}
-                  title="Centrar cámara"
-                >
-                  ⌖
-                </button>
-                <button
-                  className={`view-toggle-btn ${animated ? "active" : ""}`}
-                  onClick={() => setAnimated((a) => !a)}
-                  title={animated ? "Desactivar animaciones" : "Activar animaciones"}
-                >
-                  ✦
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>
+
+      {view === "3d" && (
+        <Scene3DControls
+          state={scene3d}
+          onToggleGrid={() => toggle("showGrid")}
+          onToggleLabels={() => toggle("showLabels")}
+          onToggleZones={() => toggle("showZones")}
+          onToggleAnimated={() => toggle("animated")}
+          onQualityChange={(q: QualityMode) => setScene3d((s) => ({ ...s, quality: q }))}
+          onPresetChange={(name: string) => setScene3d((s) => ({ ...s, cameraPreset: name }))}
+          onReset={handleReset}
+        />
+      )}
 
       {view === "2d" ? (
         <div className="map-canvas">
@@ -121,7 +135,16 @@ export function ScenarioBoard({ state }: ScenarioBoardProps) {
               </div>
             }
           >
-            <Scene3D state={state} resetSignal={resetSignal} animated={animated} />
+            <Scene3D
+              state={state}
+              resetSignal={resetSignal}
+              animated={scene3d.animated}
+              showGrid={scene3d.showGrid}
+              showLabels={scene3d.showLabels}
+              showZones={scene3d.showZones}
+              quality={scene3d.quality}
+              cameraPreset={scene3d.cameraPreset}
+            />
           </Suspense>
         </WebGLFallback>
       )}
