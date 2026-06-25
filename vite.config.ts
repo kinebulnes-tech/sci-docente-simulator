@@ -6,5 +6,15 @@ export default defineConfig({
   server: {
     port: 5177,
     host: "0.0.0.0"
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-three": ["three"],
+          "vendor-r3f":   ["@react-three/fiber", "@react-three/drei"],
+        }
+      }
+    }
   }
 });

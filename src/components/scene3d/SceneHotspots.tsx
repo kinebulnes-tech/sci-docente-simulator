@@ -1,5 +1,6 @@
 import type { ScenarioHotspot } from "../../types/sci";
-import { hasValidCoords, hotspotKindToColor, normalizeCoords } from "../../utils/scene3d";
+import { hasValidCoords, hotspotAnimationType, hotspotKindToColor, normalizeCoords } from "../../utils/scene3d";
+import { FireHotspot, PulseHotspot } from "./AnimatedHotspot";
 
 interface SceneHotspotsProps {
   hotspots: ScenarioHotspot[];
@@ -7,11 +8,27 @@ interface SceneHotspotsProps {
   hasPerimeter: boolean;
 }
 
+/** Static map pin — used for hotspot kinds that have no animation. */
+function StaticPin({ kind, position }: { kind: string; position: [number, number, number] }) {
+  const color = hotspotKindToColor(kind);
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.2, 0]}>
+        <cylinderGeometry args={[0.04, 0.04, 0.4, 6]} />
+        <meshLambertMaterial color={color} />
+      </mesh>
+      <mesh position={[0, 0.55, 0]}>
+        <sphereGeometry args={[0.22, 8, 8]} />
+        <meshLambertMaterial color={color} />
+      </mesh>
+    </group>
+  );
+}
+
 /** Map-pin markers for scenario hotspots + optional perimeter ring and command post. */
 export function SceneHotspots({ hotspots, hasCommand, hasPerimeter }: SceneHotspotsProps) {
   return (
     <>
-      {/* Perimeter ring when player defined evacuation perimeter */}
       {hasPerimeter && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[1, 0.02, -1]}>
           <ringGeometry args={[5.2, 5.8, 48]} />
@@ -19,27 +36,15 @@ export function SceneHotspots({ hotspots, hasCommand, hasPerimeter }: SceneHotsp
         </mesh>
       )}
 
-      {/* Hotspot map pins */}
       {hotspots.filter(hasValidCoords).map((h) => {
         const [wx, , wz] = normalizeCoords(h.x, h.y);
-        const color = hotspotKindToColor(h.kind);
-        return (
-          <group key={h.id} position={[wx, 0, wz]}>
-            {/* Stem */}
-            <mesh position={[0, 0.2, 0]}>
-              <cylinderGeometry args={[0.04, 0.04, 0.4, 6]} />
-              <meshLambertMaterial color={color} />
-            </mesh>
-            {/* Head */}
-            <mesh position={[0, 0.55, 0]}>
-              <sphereGeometry args={[0.22, 8, 8]} />
-              <meshLambertMaterial color={color} />
-            </mesh>
-          </group>
-        );
+        const pos: [number, number, number] = [wx, 0, wz];
+        const anim = hotspotAnimationType(h.kind);
+        if (anim === "fire")  return <FireHotspot  key={h.id} id={h.id} kind={h.kind} position={pos} />;
+        if (anim === "pulse") return <PulseHotspot key={h.id} id={h.id} kind={h.kind} position={pos} />;
+        return <StaticPin key={h.id} kind={h.kind} position={pos} />;
       })}
 
-      {/* Command post marker (flag pole) */}
       {hasCommand && (
         <group position={[-3.5, 0, 3]}>
           <mesh position={[0, 0.75, 0]}>

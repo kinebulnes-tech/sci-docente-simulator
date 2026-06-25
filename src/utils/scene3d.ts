@@ -93,6 +93,34 @@ export function getMatpelZones(hotspots: ScenarioHotspot[]): MatpelZone[] {
   ];
 }
 
+/** Animation type for a hotspot kind. "fire" flickers; "pulse" emits expanding ring. */
+export function hotspotAnimationType(kind: string): "fire" | "pulse" | "none" {
+  if (kind === "fuego") return "fire";
+  if (kind === "riesgo" || kind === "victima") return "pulse";
+  return "none";
+}
+
+/** True when the hotspot kind carries a useFrame animation. */
+export function shouldAnimateHotspot(kind: string): boolean {
+  return hotspotAnimationType(kind) !== "none";
+}
+
+/** Animation type for a resource status. "route" bounces (en ruta); "demob" is static/dimmed. */
+export function resourceAnimationType(status: string): "route" | "demob" | "none" {
+  if (status === "solicitado") return "route";
+  if (status === "desmovilizado") return "demob";
+  return "none";
+}
+
+/**
+ * Recommend an OrthographicCamera zoom for the given canvas pixel dimensions.
+ * Derived from SCENE_HALF=9 and the 22×22 terrain — a 392px canvas gives zoom 28.
+ * Clamped to [14, 80] to match OrbitControls minZoom/maxZoom.
+ */
+export function recommendedZoom(width: number, height: number): number {
+  return Math.max(14, Math.min(80, Math.min(width, height) / 14));
+}
+
 /** Place resources in a fixed grid at the far edge of the scene. */
 export function positionResources(resources: ScenarioResource[]): VisualResource[] {
   return resources.map((r, i) => {

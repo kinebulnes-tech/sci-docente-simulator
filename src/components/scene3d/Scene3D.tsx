@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, OrthographicCamera } from "@react-three/drei";
+import { OrthographicCamera } from "@react-three/drei";
 import type { SimulationState } from "../../types/sci";
+import { CameraController } from "./CameraController";
 import { SceneBuildings } from "./SceneBuildings";
 import { SceneHotspots } from "./SceneHotspots";
 import { SceneLabels } from "./SceneLabels";
@@ -10,26 +11,20 @@ import { SceneZones } from "./SceneZones";
 
 interface Scene3DProps {
   state: SimulationState;
+  resetSignal?: number;
 }
 
 /** Isometric 3D scene — pure visual layer, SimulationState is the source of truth. */
-export function Scene3D({ state }: Scene3DProps) {
+export function Scene3D({ state, resetSignal = 0 }: Scene3DProps) {
   const { scenario, selectedDecisions, resources } = state;
-  const hasCommand  = selectedDecisions.includes("asumir-mando");
+  const hasCommand   = selectedDecisions.includes("asumir-mando");
   const hasPerimeter = selectedDecisions.includes("perimetro-evacuacion");
 
   return (
     <div className="scene3d-canvas">
       <Canvas>
         <OrthographicCamera makeDefault position={[12, 10, 12]} zoom={28} />
-        <OrbitControls
-          enablePan={false}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 2.5}
-          minZoom={14}
-          maxZoom={80}
-          target={[0, 0, 0]}
-        />
+        <CameraController resetSignal={resetSignal} />
 
         <color attach="background" args={["#1e2d3d"]} />
 

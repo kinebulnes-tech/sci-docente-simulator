@@ -3,11 +3,15 @@ import type { ScenarioHotspot, ScenarioResource } from "../types/sci";
 import {
   getMatpelZones,
   hasValidCoords,
+  hotspotAnimationType,
   hotspotKindToColor,
   isMatpelScenario,
   normalizeCoords,
   positionResources,
+  recommendedZoom,
+  resourceAnimationType,
   resourceStatusToVisual,
+  shouldAnimateHotspot,
   terrainColorForType
 } from "./scene3d";
 
@@ -199,6 +203,90 @@ describe("scene3d utilities", () => {
 
     it("returns [] for empty input", () => {
       expect(positionResources([])).toHaveLength(0);
+    });
+  });
+
+  // ─── hotspotAnimationType ───────────────────────────────────────────────────
+
+  describe("hotspotAnimationType", () => {
+    it("fuego → fire", () => {
+      expect(hotspotAnimationType("fuego")).toBe("fire");
+    });
+
+    it("riesgo → pulse", () => {
+      expect(hotspotAnimationType("riesgo")).toBe("pulse");
+    });
+
+    it("victima → pulse", () => {
+      expect(hotspotAnimationType("victima")).toBe("pulse");
+    });
+
+    it("pc → none", () => {
+      expect(hotspotAnimationType("pc")).toBe("none");
+    });
+
+    it("unknown kind → none", () => {
+      expect(hotspotAnimationType("desconocido")).toBe("none");
+    });
+  });
+
+  // ─── shouldAnimateHotspot ───────────────────────────────────────────────────
+
+  describe("shouldAnimateHotspot", () => {
+    it("fuego → true", () => expect(shouldAnimateHotspot("fuego")).toBe(true));
+    it("riesgo → true", () => expect(shouldAnimateHotspot("riesgo")).toBe(true));
+    it("victima → true", () => expect(shouldAnimateHotspot("victima")).toBe(true));
+    it("pc → false", () => expect(shouldAnimateHotspot("pc")).toBe(false));
+    it("recurso → false", () => expect(shouldAnimateHotspot("recurso")).toBe(false));
+  });
+
+  // ─── resourceAnimationType ──────────────────────────────────────────────────
+
+  describe("resourceAnimationType", () => {
+    it("solicitado → route", () => {
+      expect(resourceAnimationType("solicitado")).toBe("route");
+    });
+
+    it("desmovilizado → demob", () => {
+      expect(resourceAnimationType("desmovilizado")).toBe("demob");
+    });
+
+    it("disponible → none", () => {
+      expect(resourceAnimationType("disponible")).toBe("none");
+    });
+
+    it("asignado → none", () => {
+      expect(resourceAnimationType("asignado")).toBe("none");
+    });
+
+    it("fuera_servicio → none", () => {
+      expect(resourceAnimationType("fuera_servicio")).toBe("none");
+    });
+  });
+
+  // ─── recommendedZoom ────────────────────────────────────────────────────────
+
+  describe("recommendedZoom", () => {
+    it("small canvas (100×100) clamps to minimum 14", () => {
+      expect(recommendedZoom(100, 100)).toBe(14);
+    });
+
+    it("large canvas (5000×5000) clamps to maximum 80", () => {
+      expect(recommendedZoom(5000, 5000)).toBe(80);
+    });
+
+    it("reference canvas (392×392) returns zoom 28", () => {
+      expect(recommendedZoom(392, 392)).toBeCloseTo(28);
+    });
+
+    it("uses the shorter dimension (min of width, height)", () => {
+      expect(recommendedZoom(200, 800)).toBe(recommendedZoom(800, 200));
+    });
+
+    it("typical desktop canvas stays within [14, 80]", () => {
+      const z = recommendedZoom(900, 560);
+      expect(z).toBeGreaterThanOrEqual(14);
+      expect(z).toBeLessThanOrEqual(80);
     });
   });
 
