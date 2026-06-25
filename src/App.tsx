@@ -3,6 +3,7 @@ import { AppHeader } from "./components/AppHeader";
 import { DecisionPanel } from "./components/DecisionPanel";
 import { DoctrinePanel } from "./components/DoctrinePanel";
 import { FeedbackToast } from "./components/FeedbackToast";
+import { IcsFormViewer } from "./components/IcsFormViewer";
 import { InstructorPanel } from "./components/InstructorPanel";
 import { MetricGrid } from "./components/MetricGrid";
 import { ObjectivePanel } from "./components/ObjectivePanel";
@@ -68,7 +69,12 @@ function SimulationScreen({ config, onExit }: SimulationScreenProps) {
         <div className="left-stack">
           <ScenarioBoard scenario={state.scenario} selectedDecisions={state.selectedDecisions} />
           <ObjectivePanel state={state} />
-          <OrgChart activeRoles={state.activeRoles} dispatch={dispatch} />
+          <OrgChart
+            activeRoles={state.activeRoles}
+            spanOfControlWarning={state.spanOfControlWarning}
+            role={role}
+            dispatch={dispatch}
+          />
         </div>
 
         <div className="center-stack">
@@ -101,6 +107,8 @@ function SimulationScreen({ config, onExit }: SimulationScreenProps) {
         <Timeline entries={state.timeline} />
         {isInstructor && <DoctrinePanel />}
       </div>
+
+      {isInstructor && <IcsFormViewer state={state} />}
 
       <FeedbackToast feedback={feedback} onClose={clearFeedback} />
     </main>

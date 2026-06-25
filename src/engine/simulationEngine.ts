@@ -1,15 +1,19 @@
 import { structuralFireRubric } from "../data/rubrics";
 import { sciRoles } from "../data/sciDoctrine";
 import type {
+  CommandTransfer,
   EvaluationResult,
   IncidentMetric,
   IncidentStatus,
+  OperationalPeriod,
   RubricItem,
   Scenario,
   ScenarioDecision,
   ScenarioInject,
   SimulationAction,
-  SimulationState
+  SimulationState,
+  TimelineEntry,
+  UnifiedCommand
 } from "../types/sci";
 import { clamp } from "../utils/number";
 
@@ -61,6 +65,30 @@ function completeObjectives(state: SimulationState, selectedDecisions: string[])
   return Array.from(new Set([...state.completedObjectives, ...completed]));
 }
 
+function updateResourceETAs(state: SimulationState, fromMinute: number, toMinute: number): SimulationState {
+  const elapsed = toMinute - fromMinute;
+  const arrivedNames: string[] = [];
+
+  const resources = state.resources.map((r) => {
+    if (r.status !== "solicitado" || r.etaMinutes === undefined || r.etaMinutes <= 0) return r;
+    const newEta = Math.max(0, r.etaMinutes - elapsed);
+    if (newEta === 0) {
+      arrivedNames.push(r.name);
+      return { ...r, etaMinutes: 0, status: "disponible" as const };
+    }
+    return { ...r, etaMinutes: newEta };
+  });
+
+  const arrivalEntries: TimelineEntry[] = arrivedNames.map((name) => ({
+    minute: toMinute,
+    type: "system" as const,
+    title: `Recurso disponible: ${name}`,
+    detail: `${name} llegó a escena. Asignar misión específica y registrar en control de personal.`
+  }));
+
+  return { ...state, resources, timeline: [...state.timeline, ...arrivalEntries] };
+}
+
 function triggerAutomaticInjects(state: SimulationState, nextMinute: number): SimulationState {
   const dueInjects = state.scenario.injects.filter(
     (inject) =>
@@ -99,6 +127,11 @@ function applyInject(state: SimulationState, inject: ScenarioInject): Simulation
   };
 }
 
+export function evaluateSpanOfControl(activeRoles: string[]): { exceeded: boolean; count: number; threshold: number } {
+  const count = sciRoles.filter((r) => activeRoles.includes(r.id) && r.function !== "mando").length;
+  return { exceeded: count >= 7, count, threshold: 7 };
+}
+
 export function createInitialState(scenario: Scenario): SimulationState {
   const activeRoles = sciRoles.filter((role) => role.activeByDefault).map((role) => role.id);
 
@@ -119,7 +152,13 @@ export function createInitialState(scenario: Scenario): SimulationState {
         detail: scenario.briefing
       }
     ],
-    resources: scenario.resources
+    resources: scenario.resources,
+    commandHistory: [],
+    currentCommandHolder: "CI",
+    unifiedCommand: null,
+    operationalPeriods: [],
+    currentPeriod: 0,
+    spanOfControlWarning: false
   };
 }
 
@@ -205,7 +244,8 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
         metrics: passiveMetrics,
         status: getStatus(passiveMetrics)
       };
-      return triggerAutomaticInjects(nextState, nextMinute);
+      const afterInjects = triggerAutomaticInjects(nextState, nextMinute);
+      return updateResourceETAs(afterInjects, state.minute, nextMinute);
     }
 
     case "TOGGLE_ROLE": {
@@ -215,19 +255,136 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
         : [...state.activeRoles, action.roleId];
 
       const metrics = applyMetricImpact(state.metrics, isActive ? { complexity: -1 } : { coordination: 2, complexity: 1 });
+      const spanCheck = evaluateSpanOfControl(activeRoles);
 
       return {
         ...state,
         activeRoles,
         metrics,
         status: getStatus(metrics),
+        spanOfControlWarning: spanCheck.exceeded,
         timeline: [
           ...state.timeline,
           {
             minute: state.minute,
             type: "system",
             title: isActive ? "Rol desactivado" : "Rol activado",
-            detail: action.roleId
+            detail: spanCheck.exceeded
+              ? `${action.roleId} — ⚠️ Tramo de control excedido (${spanCheck.count}/${spanCheck.threshold})`
+              : action.roleId
+          }
+        ]
+      };
+    }
+
+    case "TRANSFER_COMMAND": {
+      const fromName = action.fromName ?? state.currentCommandHolder;
+      const briefingDecisions = ["pai-inicial", "objetivos-iniciales", "asumir-mando"];
+      const briefingConfirmed = briefingDecisions.some((id) => state.selectedDecisions.includes(id));
+      const transfer: CommandTransfer = { minute: state.minute, fromName, toName: action.toName, briefingConfirmed };
+      const metrics = applyMetricImpact(state.metrics, briefingConfirmed
+        ? { coordination: 6, complexity: -2 }
+        : { coordination: -4, complexity: 3 });
+
+      return {
+        ...state,
+        metrics,
+        status: getStatus(metrics),
+        currentCommandHolder: action.toName,
+        commandHistory: [...state.commandHistory, transfer],
+        timeline: [
+          ...state.timeline,
+          {
+            minute: state.minute,
+            type: "decision",
+            title: `Transferencia de mando: ${fromName} → ${action.toName}`,
+            detail: briefingConfirmed
+              ? `Transferencia formal con briefing documentado (ICS 201). Mando asumido por ${action.toName}.`
+              : `⚠️ Transferencia sin briefing formal. Riesgo de pérdida de conciencia situacional. Documentar ICS 201.`
+          }
+        ]
+      };
+    }
+
+    case "ACTIVATE_UNIFIED_COMMAND": {
+      if (state.unifiedCommand?.active) return state;
+      const uc: UnifiedCommand = { active: true, agencies: action.agencies, activatedAtMinute: state.minute };
+      const metrics = applyMetricImpact(state.metrics, { coordination: 15, complexity: -5, control: 8 });
+
+      return {
+        ...state,
+        metrics,
+        status: getStatus(metrics),
+        unifiedCommand: uc,
+        timeline: [
+          ...state.timeline,
+          {
+            minute: state.minute,
+            type: "decision",
+            title: "Mando unificado activado",
+            detail: `Agencias en CU: ${action.agencies.join(", ")}. Establecer objetivos comunes, PIO conjunto y reunión inicial de CU.`
+          }
+        ]
+      };
+    }
+
+    case "START_OPERATIONAL_PERIOD": {
+      const periodNumber = state.currentPeriod + 1;
+      const period: OperationalPeriod = {
+        id: `periodo-${periodNumber}`,
+        number: periodNumber,
+        startMinute: state.minute,
+        objectives: action.objectives ?? state.scenario.objectives.map((o) => o.id)
+      };
+      const closedPeriods = state.operationalPeriods.map((p, i) =>
+        i === state.operationalPeriods.length - 1 && p.endMinute === undefined
+          ? { ...p, endMinute: state.minute }
+          : p
+      );
+      const metrics = applyMetricImpact(state.metrics, { control: 8, coordination: 8, complexity: -5 });
+
+      return {
+        ...state,
+        metrics,
+        status: getStatus(metrics),
+        currentPeriod: periodNumber,
+        operationalPeriods: [...closedPeriods, period],
+        timeline: [
+          ...state.timeline,
+          {
+            minute: state.minute,
+            type: "system",
+            title: `Inicio Período Operacional ${periodNumber}`,
+            detail: `Período ${periodNumber} activado en minuto ${state.minute}. Actualizar PAI, asignaciones y comunicaciones.`
+          }
+        ]
+      };
+    }
+
+    case "DEMOBILIZE_RESOURCE": {
+      const resource = state.resources.find((r) => r.id === action.resourceId);
+      if (!resource || resource.status === "desmovilizado") return state;
+      const wasCritical = resource.status === "asignado";
+      const metrics = wasCritical
+        ? applyMetricImpact(state.metrics, { control: -4, coordination: -2 })
+        : state.metrics;
+
+      return {
+        ...state,
+        metrics,
+        status: getStatus(metrics),
+        resources: state.resources.map((r) =>
+          r.id === action.resourceId ? { ...r, status: "desmovilizado" as const } : r
+        ),
+        timeline: [
+          ...state.timeline,
+          {
+            minute: state.minute,
+            type: "system",
+            title: `Desmovilización: ${resource.name}`,
+            detail: wasCritical
+              ? `⚠️ ${resource.name} desmovilizado mientras estaba asignado. Verificar cobertura operacional.`
+              : `Desmovilización formal de ${resource.name}. Registrar en ICS 221.`
           }
         ]
       };

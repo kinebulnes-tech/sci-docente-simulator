@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { structuralFireScenario, scenarios, scenarioMap } from "../data/scenarios";
+import { buildIcs214 } from "../utils/icsForms";
 import {
   createInitialState,
   evaluateSimulation,
+  evaluateSpanOfControl,
   getGlobalScore,
   simulationReducer
 } from "./simulationEngine";
@@ -200,5 +202,138 @@ describe("banco de escenarios", () => {
       const total = s.rubric.reduce((sum, item) => sum + item.maxPoints, 0);
       expect(total, `${s.id}: rubric suma ${total}, no 100`).toBe(100);
     });
+  });
+});
+
+describe("motor doctrinal Fase 3", () => {
+  it("TRANSFER_COMMAND genera entrada en timeline y actualiza titular", () => {
+    const state = createInitialState(structuralFireScenario);
+    const next = simulationReducer(state, { type: "TRANSFER_COMMAND", toName: "Cap. García" });
+
+    expect(next.currentCommandHolder).toBe("Cap. García");
+    expect(next.commandHistory).toHaveLength(1);
+    expect(next.commandHistory[0].toName).toBe("Cap. García");
+    expect(next.commandHistory[0].briefingConfirmed).toBe(false);
+    const entry = next.timeline.find((e) => e.title.includes("Transferencia de mando"));
+    expect(entry).toBeDefined();
+  });
+
+  it("TRANSFER_COMMAND con briefing previo marca briefingConfirmed = true", () => {
+    let state = createInitialState(structuralFireScenario);
+    state = simulationReducer(state, { type: "APPLY_DECISION", decisionId: "asumir-mando" });
+    const next = simulationReducer(state, { type: "TRANSFER_COMMAND", toName: "Sub. López" });
+
+    expect(next.commandHistory[0].briefingConfirmed).toBe(true);
+    expect(next.metrics.coordination).toBeGreaterThan(state.metrics.coordination);
+  });
+
+  it("ACTIVATE_UNIFIED_COMMAND activa CU y mejora coordinación", () => {
+    const state = createInitialState(structuralFireScenario);
+    const next = simulationReducer(state, {
+      type: "ACTIVATE_UNIFIED_COMMAND",
+      agencies: ["Bomberos", "Carabineros", "SAMU"]
+    });
+
+    expect(next.unifiedCommand?.active).toBe(true);
+    expect(next.unifiedCommand?.agencies).toContain("SAMU");
+    expect(next.metrics.coordination).toBeGreaterThan(state.metrics.coordination);
+  });
+
+  it("ACTIVATE_UNIFIED_COMMAND no se activa dos veces", () => {
+    let state = createInitialState(structuralFireScenario);
+    state = simulationReducer(state, { type: "ACTIVATE_UNIFIED_COMMAND", agencies: ["A", "B"] });
+    const second = simulationReducer(state, { type: "ACTIVATE_UNIFIED_COMMAND", agencies: ["C", "D"] });
+
+    expect(second.unifiedCommand?.agencies).toEqual(["A", "B"]);
+  });
+
+  it("START_OPERATIONAL_PERIOD crea nuevo período y cierra el anterior", () => {
+    const state = createInitialState(structuralFireScenario);
+    const p1 = simulationReducer(state, { type: "START_OPERATIONAL_PERIOD" });
+    expect(p1.operationalPeriods).toHaveLength(1);
+    expect(p1.currentPeriod).toBe(1);
+
+    const p2 = simulationReducer(p1, { type: "START_OPERATIONAL_PERIOD" });
+    expect(p2.operationalPeriods).toHaveLength(2);
+    expect(p2.currentPeriod).toBe(2);
+    expect(p2.operationalPeriods[0].endMinute).toBeDefined();
+  });
+
+  it("DEMOBILIZE_RESOURCE cambia estado del recurso a desmovilizado", () => {
+    const state = createInitialState(structuralFireScenario);
+    const next = simulationReducer(state, { type: "DEMOBILIZE_RESOURCE", resourceId: "z2" });
+
+    const resource = next.resources.find((r) => r.id === "z2");
+    expect(resource?.status).toBe("desmovilizado");
+    const entry = next.timeline.find((e) => e.title.includes("Desmovilización"));
+    expect(entry).toBeDefined();
+  });
+
+  it("DEMOBILIZE_RESOURCE penaliza si recurso estaba asignado", () => {
+    let state = createInitialState(structuralFireScenario);
+    state = { ...state, resources: state.resources.map((r) => r.id === "b1" ? { ...r, status: "asignado" as const } : r) };
+    const next = simulationReducer(state, { type: "DEMOBILIZE_RESOURCE", resourceId: "b1" });
+
+    expect(next.metrics.control).toBeLessThan(state.metrics.control);
+  });
+
+  it("ADVANCE_TIME reduce ETA de recursos en ruta", () => {
+    const state = createInitialState(structuralFireScenario);
+    const z2Before = state.resources.find((r) => r.id === "z2");
+    expect(z2Before?.etaMinutes).toBe(7);
+
+    const next = simulationReducer(state, { type: "ADVANCE_TIME", minutes: 4 });
+    const z2After = next.resources.find((r) => r.id === "z2");
+    expect(z2After?.etaMinutes).toBe(3);
+  });
+
+  it("ADVANCE_TIME cambia recurso a disponible cuando ETA llega a 0", () => {
+    const state = createInitialState(structuralFireScenario);
+    const next = simulationReducer(state, { type: "ADVANCE_TIME", minutes: 10 });
+
+    const z2 = next.resources.find((r) => r.id === "z2");
+    expect(z2?.status).toBe("disponible");
+    const arrivalEntry = next.timeline.find((e) => e.title.includes("Recurso disponible") && e.title.includes("Z-2"));
+    expect(arrivalEntry).toBeDefined();
+  });
+
+  it("evaluateSpanOfControl detecta exceso al alcanzar umbral de 7 subordinados", () => {
+    const fewRoles = ["ci", "seguridad", "enlace"];
+    const safe = evaluateSpanOfControl(fewRoles);
+    expect(safe.exceeded).toBe(false);
+    expect(safe.count).toBe(2);
+
+    const allRoles = ["ci", "seguridad", "enlace", "info-publica", "jefe-operaciones", "jefe-planificacion", "jefe-logistica", "jefe-admin"];
+    const full = evaluateSpanOfControl(allRoles);
+    expect(full.exceeded).toBe(true);
+    expect(full.count).toBe(7);
+    expect(full.threshold).toBe(7);
+  });
+
+  it("TOGGLE_ROLE activa spanOfControlWarning al alcanzar umbral de 7", () => {
+    let state = createInitialState(structuralFireScenario);
+    expect(state.spanOfControlWarning).toBe(false);
+
+    const rolesToActivate = ["seguridad", "enlace", "info-publica", "jefe-operaciones", "jefe-planificacion", "jefe-logistica", "jefe-admin"];
+    for (const roleId of rolesToActivate) {
+      state = simulationReducer(state, { type: "TOGGLE_ROLE", roleId });
+    }
+    expect(state.activeRoles.filter((id) => id !== "ci")).toHaveLength(7);
+    expect(state.spanOfControlWarning).toBe(true);
+
+    // Desactivar uno reduce la advertencia
+    state = simulationReducer(state, { type: "TOGGLE_ROLE", roleId: "jefe-admin" });
+    expect(state.spanOfControlWarning).toBe(false);
+  });
+
+  it("buildIcs214 genera entradas desde el timeline", () => {
+    let state = createInitialState(structuralFireScenario);
+    state = simulationReducer(state, { type: "APPLY_DECISION", decisionId: "asumir-mando" });
+    state = simulationReducer(state, { type: "ADVANCE_TIME", minutes: 10 });
+
+    const ics214 = buildIcs214(state);
+    expect(ics214.entries.length).toBeGreaterThan(1);
+    expect(ics214.entries[0].minute).toBe(0);
+    expect(ics214.operatorName).toBe("CI");
   });
 });

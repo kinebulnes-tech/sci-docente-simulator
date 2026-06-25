@@ -44,6 +44,12 @@ function savePersisted(config: SessionConfig, state: SimulationState, isComplete
       completedObjectives: state.completedObjectives,
       timeline: state.timeline,
       resources: state.resources,
+      commandHistory: state.commandHistory,
+      currentCommandHolder: state.currentCommandHolder,
+      unifiedCommand: state.unifiedCommand,
+      operationalPeriods: state.operationalPeriods,
+      currentPeriod: state.currentPeriod,
+      spanOfControlWarning: state.spanOfControlWarning,
       isCompleted
     };
     localStorage.setItem(storageKey(config), JSON.stringify(serializable));
@@ -67,7 +73,13 @@ function buildInitialState(config: SessionConfig, scenario: SimulationState["sce
       triggeredInjects: saved.triggeredInjects,
       completedObjectives: saved.completedObjectives,
       timeline: saved.timeline,
-      resources: saved.resources
+      resources: saved.resources,
+      commandHistory: saved.commandHistory ?? [],
+      currentCommandHolder: saved.currentCommandHolder ?? "CI",
+      unifiedCommand: saved.unifiedCommand ?? null,
+      operationalPeriods: saved.operationalPeriods ?? [],
+      currentPeriod: saved.currentPeriod ?? 0,
+      spanOfControlWarning: saved.spanOfControlWarning ?? false
     };
   }
   return createInitialState(scenario);

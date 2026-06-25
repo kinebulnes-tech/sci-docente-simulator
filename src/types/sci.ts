@@ -61,9 +61,30 @@ export interface ScenarioResource {
   id: string;
   name: string;
   type: "unidad" | "personal" | "equipo" | "institucion" | "instalacion";
-  status: "disponible" | "asignado" | "solicitado" | "fuera_servicio";
+  status: "disponible" | "asignado" | "solicitado" | "fuera_servicio" | "desmovilizado";
   etaMinutes?: number;
   capabilities: string[];
+}
+
+export interface CommandTransfer {
+  minute: number;
+  fromName: string;
+  toName: string;
+  briefingConfirmed: boolean;
+}
+
+export interface UnifiedCommand {
+  active: boolean;
+  agencies: string[];
+  activatedAtMinute: number;
+}
+
+export interface OperationalPeriod {
+  id: string;
+  number: number;
+  startMinute: number;
+  endMinute?: number;
+  objectives: string[];
 }
 
 export interface ScenarioInject {
@@ -160,6 +181,12 @@ export interface SimulationState {
   completedObjectives: string[];
   timeline: TimelineEntry[];
   resources: ScenarioResource[];
+  commandHistory: CommandTransfer[];
+  currentCommandHolder: string;
+  unifiedCommand: UnifiedCommand | null;
+  operationalPeriods: OperationalPeriod[];
+  currentPeriod: number;
+  spanOfControlWarning: boolean;
 }
 
 export type SimulationAction =
@@ -167,6 +194,10 @@ export type SimulationAction =
   | { type: "TRIGGER_INJECT"; injectId: string }
   | { type: "ADVANCE_TIME"; minutes: number }
   | { type: "TOGGLE_ROLE"; roleId: string }
+  | { type: "TRANSFER_COMMAND"; toName: string; fromName?: string }
+  | { type: "ACTIVATE_UNIFIED_COMMAND"; agencies: string[] }
+  | { type: "START_OPERATIONAL_PERIOD"; objectives?: string[] }
+  | { type: "DEMOBILIZE_RESOURCE"; resourceId: string }
   | { type: "RESET" };
 
 export type SessionRole = "instructor" | "alumno";
