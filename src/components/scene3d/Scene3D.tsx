@@ -31,6 +31,8 @@ export function Scene3D({ state }: Scene3DProps) {
           target={[0, 0, 0]}
         />
 
+        <color attach="background" args={["#1e2d3d"]} />
+
         <ambientLight intensity={0.75} />
         <directionalLight position={[10, 14, 8]} intensity={1.1} />
 

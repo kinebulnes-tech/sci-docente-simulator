@@ -13,7 +13,7 @@ export function SceneLabels({ hotspots }: SceneLabelsProps) {
       {hotspots.filter(hasValidCoords).map((h) => {
         const [wx, , wz] = normalizeCoords(h.x, h.y);
         return (
-          <Html key={h.id} position={[wx, 1.1, wz]} center distanceFactor={9}>
+          <Html key={h.id} position={[wx, 1.1, wz]} center>
             <div className="scene-label">{h.label}</div>
           </Html>
         );

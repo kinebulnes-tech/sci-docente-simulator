@@ -1410,9 +1410,10 @@ p {
   color: #fff;
   padding: 2px 7px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 11px;
   font-family: inherit;
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+  line-height: 1.4;
 }
