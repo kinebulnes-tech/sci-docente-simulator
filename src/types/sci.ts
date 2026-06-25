@@ -158,3 +158,19 @@ export type SimulationAction =
   | { type: "ADVANCE_TIME"; minutes: number }
   | { type: "TOGGLE_ROLE"; roleId: string }
   | { type: "RESET" };
+
+export type SessionRole = "instructor" | "alumno";
+
+export interface SessionConfig {
+  role: SessionRole;
+  scenarioId: string;
+}
+
+export type FeedbackVariant = "success" | "warning" | "danger";
+
+export interface DecisionFeedback {
+  decisionId: string;
+  variant: FeedbackVariant;
+  title: string;
+  message: string;
+}

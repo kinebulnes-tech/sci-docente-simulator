@@ -311,3 +311,7 @@ export const structuralFireScenario: Scenario = {
 };
 
 export const scenarios: Scenario[] = [structuralFireScenario];
+
+export const scenarioMap: Record<string, Scenario> = Object.fromEntries(
+  scenarios.map((s) => [s.id, s])
+);
