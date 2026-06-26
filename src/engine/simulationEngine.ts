@@ -83,7 +83,10 @@ function updateResourceETAs(state: SimulationState, fromMinute: number, toMinute
     minute: toMinute,
     type: "system" as const,
     title: `Recurso disponible: ${name}`,
-    detail: `${name} llegó a escena. Asignar misión específica y registrar en control de personal.`
+    detail: `${name} llegó a escena. Asignar misión específica y registrar en control de personal.`,
+    source: "system" as const,
+    evaluable: false,
+    visibility: "all" as const,
   }));
 
   return { ...state, resources, timeline: [...state.timeline, ...arrivalEntries] };
@@ -107,7 +110,11 @@ function triggerAutomaticInjects(state: SimulationState, nextMinute: number): Si
   });
 }
 
-function applyInject(state: SimulationState, inject: ScenarioInject): SimulationState {
+function applyInject(
+  state: SimulationState,
+  inject: ScenarioInject,
+  triggerSource: "instructor" | "system" = "system"
+): SimulationState {
   const metrics = applyMetricImpact(state.metrics, inject.metricImpact);
 
   return {
@@ -121,7 +128,10 @@ function applyInject(state: SimulationState, inject: ScenarioInject): Simulation
         minute: state.minute,
         type: "inject",
         title: inject.title,
-        detail: inject.description
+        detail: inject.description,
+        source: triggerSource,
+        evaluable: false,
+        visibility: "all" as const,
       }
     ]
   };
@@ -149,7 +159,10 @@ export function createInitialState(scenario: Scenario): SimulationState {
         minute: 0,
         type: "system",
         title: "Inicio del ejercicio",
-        detail: scenario.briefing
+        detail: scenario.briefing,
+        source: "system" as const,
+        evaluable: false,
+        visibility: "all" as const,
       }
     ],
     resources: scenario.resources,
@@ -176,9 +189,12 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
             ...state.timeline,
             {
               minute: state.minute,
-              type: "system",
+              type: "system" as const,
               title: "Decisión bloqueada",
-              detail: blockedReason
+              detail: blockedReason,
+              source: "system" as const,
+              evaluable: false,
+              visibility: "instructor" as const,
             }
           ]
         };
@@ -195,9 +211,12 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
             ...state.timeline,
             {
               minute: state.minute,
-              type: "decision",
+              type: "decision" as const,
               title: `Repetida: ${decision.title}`,
-              detail: "La repetición de esta acción no agrega valor y aumenta carga de mando."
+              detail: "La repetición de esta acción no agrega valor y aumenta carga de mando.",
+              source: "student" as const,
+              evaluable: false,
+              visibility: "all" as const,
             }
           ]
         };
@@ -218,9 +237,12 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
           ...state.timeline,
           {
             minute: state.minute,
-            type: "decision",
+            type: "decision" as const,
             title: decision.title,
-            detail: decision.description
+            detail: decision.description,
+            source: "student" as const,
+            evaluable: true,
+            visibility: "all" as const,
           }
         ]
       };
@@ -229,7 +251,7 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
     case "TRIGGER_INJECT": {
       const inject = state.scenario.injects.find((item) => item.id === action.injectId);
       if (!inject || state.triggeredInjects.includes(inject.id)) return state;
-      return applyInject(state, inject);
+      return applyInject(state, inject, "instructor");
     }
 
     case "ADVANCE_TIME": {
@@ -267,11 +289,14 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
           ...state.timeline,
           {
             minute: state.minute,
-            type: "system",
+            type: "system" as const,
             title: isActive ? "Rol desactivado" : "Rol activado",
             detail: spanCheck.exceeded
               ? `${action.roleId} — ⚠️ Tramo de control excedido (${spanCheck.count}/${spanCheck.threshold})`
-              : action.roleId
+              : action.roleId,
+            source: "instructor" as const,
+            evaluable: false,
+            visibility: "instructor" as const,
           }
         ]
       };
@@ -296,11 +321,14 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
           ...state.timeline,
           {
             minute: state.minute,
-            type: "decision",
+            type: "decision" as const,
             title: `Transferencia de mando: ${fromName} → ${action.toName}`,
             detail: briefingConfirmed
               ? `Transferencia formal con briefing documentado (ICS 201). Mando asumido por ${action.toName}.`
-              : `⚠️ Transferencia sin briefing formal. Riesgo de pérdida de conciencia situacional. Documentar ICS 201.`
+              : `⚠️ Transferencia sin briefing formal. Riesgo de pérdida de conciencia situacional. Documentar ICS 201.`,
+            source: "instructor" as const,
+            evaluable: false,
+            visibility: "all" as const,
           }
         ]
       };
@@ -320,9 +348,12 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
           ...state.timeline,
           {
             minute: state.minute,
-            type: "decision",
+            type: "decision" as const,
             title: "Mando unificado activado",
-            detail: `Agencias en CU: ${action.agencies.join(", ")}. Establecer objetivos comunes, PIO conjunto y reunión inicial de CU.`
+            detail: `Agencias en CU: ${action.agencies.join(", ")}. Establecer objetivos comunes, PIO conjunto y reunión inicial de CU.`,
+            source: "instructor" as const,
+            evaluable: false,
+            visibility: "all" as const,
           }
         ]
       };
@@ -353,9 +384,12 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
           ...state.timeline,
           {
             minute: state.minute,
-            type: "system",
+            type: "system" as const,
             title: `Inicio Período Operacional ${periodNumber}`,
-            detail: `Período ${periodNumber} activado en minuto ${state.minute}. Actualizar PAI, asignaciones y comunicaciones.`
+            detail: `Período ${periodNumber} activado en minuto ${state.minute}. Actualizar PAI, asignaciones y comunicaciones.`,
+            source: "instructor" as const,
+            evaluable: false,
+            visibility: "all" as const,
           }
         ]
       };
@@ -380,11 +414,14 @@ export function simulationReducer(state: SimulationState, action: SimulationActi
           ...state.timeline,
           {
             minute: state.minute,
-            type: "system",
+            type: "system" as const,
             title: `Desmovilización: ${resource.name}`,
             detail: wasCritical
               ? `⚠️ ${resource.name} desmovilizado mientras estaba asignado. Verificar cobertura operacional.`
-              : `Desmovilización formal de ${resource.name}. Registrar en ICS 221.`
+              : `Desmovilización formal de ${resource.name}. Registrar en ICS 221.`,
+            source: "instructor" as const,
+            evaluable: false,
+            visibility: "all" as const,
           }
         ]
       };

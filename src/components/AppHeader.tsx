@@ -16,6 +16,7 @@ interface AppHeaderProps {
   onExit: () => void;
   projector?: boolean;
   onToggleProjector?: () => void;
+  showScore?: boolean;
 }
 
 const STATUS_LABEL: Record<IncidentStatus, string> = {
@@ -42,7 +43,8 @@ export function AppHeader({
   onReset,
   onExit,
   projector = false,
-  onToggleProjector
+  onToggleProjector,
+  showScore = true
 }: AppHeaderProps) {
   function handleReset() {
     if (!window.confirm("¿Reiniciar la simulación? Se perderá el progreso guardado.")) return;
@@ -67,10 +69,12 @@ export function AppHeader({
       <div className="header-actions">
         <div className={`status-pill status-${status}`}>{STATUS_LABEL[status]}</div>
 
-        <div className="score-pill">
-          <span>{globalScore}%</span>
-          <small>{scoreLabel(globalScore)}</small>
-        </div>
+        {showScore && (
+          <div className="score-pill" title="Desempeño estimado en vivo (Rúbrica del escenario)">
+            <span>{globalScore}%</span>
+            <small>Est. · {scoreLabel(globalScore)}</small>
+          </div>
+        )}
 
         <button
           className="icon-button"

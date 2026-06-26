@@ -18,6 +18,7 @@ import { DEFAULT_EVALUATION_RUBRIC } from "../data/evaluationRubrics";
 import { calculateEvaluation } from "../utils/evaluation";
 import { deduplicateLogs, deriveLogsFromTimeline, sortLogsByMinute } from "../utils/decisionLog";
 import { buildDebriefing } from "../utils/debriefing";
+import { filterEvaluableLogs } from "../utils/sessionVisibility";
 
 // ─── Persistence ───────────────────────────────────────────────────────────
 
@@ -193,7 +194,10 @@ export function useSimulation(config: SessionConfig) {
   );
 
   const evaluationSummary = useMemo(
-    () => calculateEvaluation(DEFAULT_EVALUATION_RUBRIC, decisionLogs),
+    // Only student-sourced logs count toward the grade — filters out instructor
+    // actions (TRANSFER_COMMAND, ACTIVATE_UNIFIED_COMMAND) that appear in the
+    // timeline as type:"decision" but must not boost the student's score.
+    () => calculateEvaluation(DEFAULT_EVALUATION_RUBRIC, filterEvaluableLogs(decisionLogs)),
     [decisionLogs]
   );
 

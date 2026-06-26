@@ -1,6 +1,7 @@
 import type { ScenarioHotspot } from "../../types/sci";
 import { hasValidCoords, hotspotAnimationType, hotspotKindToColor, normalizeCoords } from "../../utils/scene3d";
 import { FireHotspot, PulseHotspot } from "./AnimatedHotspot";
+import { HotspotLabel3D } from "./HotspotLabel3D";
 import { PriorityRing } from "./PriorityRing";
 import { SeverityGlow } from "./SeverityGlow";
 
@@ -9,6 +10,7 @@ interface SceneHotspotsProps {
   hasCommand: boolean;
   hasPerimeter: boolean;
   animated?: boolean;
+  showLabels?: boolean;
 }
 
 const CRITICAL_KINDS = new Set(["fuego", "victima"]);
@@ -30,7 +32,7 @@ function StaticPin({ kind, position }: { kind: string; position: [number, number
   );
 }
 
-export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = true }: SceneHotspotsProps) {
+export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = true, showLabels = false }: SceneHotspotsProps) {
   return (
     <>
       {hasPerimeter && (
@@ -59,6 +61,7 @@ export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = t
             {anim === "fire"  && <FireHotspot  id={h.id} kind={h.kind} position={pos} animated={animated} />}
             {anim === "pulse" && <PulseHotspot id={h.id} kind={h.kind} position={pos} animated={animated} />}
             {anim === "none"  && <StaticPin kind={h.kind} position={pos} />}
+            {showLabels && <HotspotLabel3D hotspot={h} />}
           </group>
         );
       })}

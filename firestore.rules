@@ -1,0 +1,436 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(profilePath());
+    }
+
+    function profile() {
+      return get(profilePath()).data;
+    }
+
+    function activeUser() {
+      return hasProfile() && profile().active == true;
+    }
+
+    function role() {
+      return profile().role;
+    }
+
+    function userCompany() {
+      return profile().companyId;
+    }
+
+    function isAdmin() {
+      return activeUser() && role() == 'admin_general';
+    }
+
+    function isComandante() {
+      return activeUser() && role() == 'comandante';
+    }
+
+    function hasRole(roles) {
+      return activeUser() && role() in roles;
+    }
+
+    function hasCompany(data) {
+      return 'companyId' in data && data.companyId is string;
+    }
+
+    function legacyNoCompany(data) {
+      return !('companyId' in data) || data.companyId == null || data.companyId == 'cuerpo';
+    }
+
+    function sameCompany(data) {
+      return hasCompany(data) && data.companyId == userCompany();
+    }
+
+    function isLegacyUser() {
+      return !('companyId' in profile()) || profile().companyId == null || profile().companyId == 'cuerpo';
+    }
+
+    function canReadScoped(data) {
+      return activeUser() && (isAdmin() || isComandante() || sameCompany(data) || legacyNoCompany(data));
+    }
+
+    function canWriteScoped(data, roles) {
+      return isAdmin() || (hasRole(roles) && sameCompany(data));
+    }
+
+    function validAuditCreate() {
+      return activeUser()
+        && request.resource.data.keys().hasAll(['eventType', 'entityType', 'entityId', 'userId', 'userEmail', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail == request.auth.token.email
+        && request.resource.data.eventType in [
+          'create_vehicle',
+          'change_vehicle_status',
+          'create_item',
+          'update_item',
+          'change_status',
+          'create_request',
+          'approve_request',
+          'reject_request',
+          'save_checklist',
+          'seed_import',
+          'upload_document',
+          'create_equipment',
+          'update_equipment',
+          'change_equipment_status',
+          'record_equipment_inspection',
+          'create_staff',
+          'update_staff',
+          'deactivate_staff'
+        ];
+    }
+
+    function canReadVolunteer(data) {
+      return activeUser()
+        && role() != 'voluntario_informante'
+        && (isAdmin() || isComandante() || sameCompany(data));
+    }
+
+    function validVolunteerWrite(id) {
+      return activeUser()
+        && request.resource.data.keys().hasAll([
+          'id',
+          'fullName',
+          'companyId',
+          'firefighterQuality',
+          'fireDepartmentPosition',
+          'regionalPosition',
+          'active',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'updatedBy'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.fullName is string
+        && request.resource.data.companyId is string
+        && request.resource.data.firefighterQuality in ['cadete', 'aspirante', 'operativo', 'profesional']
+        && request.resource.data.fireDepartmentPosition is string
+        && request.resource.data.regionalPosition is string
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number
+        && request.resource.data.createdBy is string
+        && request.resource.data.updatedBy == request.auth.uid
+        && !('rut' in request.resource.data)
+        && (
+          !('photoUrl' in request.resource.data)
+          || request.resource.data.photoUrl == null
+          || request.resource.data.photoUrl == ''
+          || (
+            request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.matches('^(https?://|/)[^\\s<>"]{1,500}$')
+          )
+        );
+    }
+
+    function validAcademicWrite(id) {
+      return activeUser()
+        && request.resource.data.id == id
+        && request.resource.data.volunteerId is string
+        && request.resource.data.companyId is string
+        && request.resource.data.courseName is string
+        && request.resource.data.institution is string
+        && request.resource.data.year is number
+        && request.resource.data.status in ['approved', 'pending', 'expired', 'unknown']
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number
+        && request.resource.data.createdBy is string
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    function validHealthWrite(id) {
+      return activeUser()
+        && request.resource.data.id == id
+        && request.resource.data.volunteerId is string
+        && request.resource.data.operationalFitness in ['fit', 'restricted', 'not_fit', 'pending', 'unknown']
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /companies/{id} {
+      allow read: if activeUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /volunteers/{id} {
+      allow get, list: if canReadVolunteer(resource.data);
+      allow create: if (isAdmin() || isComandante())
+        && validVolunteerWrite(id)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if (isAdmin() || isComandante())
+        && validVolunteerWrite(id)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /vehicles/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor']);
+      allow update: if (isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor'])) && canReadScoped(resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /vehicleDocs/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create, update: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor']);
+      allow delete: if isComandante() || canWriteScoped(resource.data, ['capitan', 'material_mayor']);
+    }
+
+    match /inventoryItems/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_menor']);
+      allow update: if (isAdmin() || isComandante()) && canReadScoped(resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /changeRequests/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if activeUser()
+        && role() != 'solo_lectura'
+        && (
+          isAdmin()
+          || isComandante()
+          || sameCompany(request.resource.data)
+          || (isLegacyUser() && legacyNoCompany(request.resource.data))
+        )
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'pendiente';
+      allow update: if (isAdmin() || isComandante())
+        && request.resource.data.status in ['aprobada', 'rechazada'];
+      allow delete: if isAdmin();
+    }
+
+    match /checklists/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor']);
+      allow update: if (isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor'])) && canReadScoped(resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /checklistTemplates/{id} {
+      allow read: if activeUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /auditLog/{id} {
+      allow read: if activeUser();
+      allow create: if validAuditCreate();
+      allow update, delete: if false;
+    }
+
+    match /maintenanceLog/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor']);
+      allow update, delete: if isAdmin();
+    }
+
+    match /maintenanceSchedules/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor']);
+      allow update: if (isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor'])) && canReadScoped(resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /vehicleHistory/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if activeUser();
+      allow update, delete: if false;
+    }
+
+    match /itemHistory/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if activeUser();
+      allow update, delete: if false;
+    }
+
+    match /requestHistory/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if activeUser();
+      allow update, delete: if false;
+    }
+
+    match /equipmentAssets/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if isComandante() || canWriteScoped(request.resource.data, ['capitan', 'material_mayor', 'material_menor']);
+      allow update: if (isAdmin() || isComandante()) && canReadScoped(resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /equipmentHistory/{id} {
+      allow get: if canReadScoped(resource.data);
+      allow list: if activeUser();
+      allow create: if activeUser();
+      allow update, delete: if false;
+    }
+
+    match /volunteerAcademicRecords/{id} {
+      allow get, list: if activeUser()
+        && role() != 'voluntario_informante'
+        && (isAdmin() || isComandante() || sameCompany(resource.data));
+      allow create: if (isAdmin() || isComandante())
+        && validAcademicWrite(id)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if (isAdmin() || isComandante())
+        && validAcademicWrite(id)
+        && request.resource.data.volunteerId == resource.data.volunteerId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /volunteerHealthRecords/{id} {
+      allow get, list: if isAdmin() || isComandante();
+      allow create: if (isAdmin() || isComandante())
+        && validHealthWrite(id)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if (isAdmin() || isComandante())
+        && validHealthWrite(id)
+        && request.resource.data.volunteerId == resource.data.volunteerId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /volunteerHistory/{id} {
+      allow get, list: if activeUser()
+        && role() != 'voluntario_informante'
+        && (isAdmin() || isComandante() || sameCompany(resource.data));
+      allow create: if isAdmin() || isComandante();
+      allow update, delete: if false;
+    }
+
+    match /staff/{id} {
+      allow get, list: if activeUser()
+        && role() in ['admin_general', 'comandante', 'capitan', 'solo_lectura'];
+      allow create: if (isAdmin() || isComandante())
+        && request.resource.data.id == id
+        && request.resource.data.fullName is string
+        && request.resource.data.position is string
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow update: if (isAdmin() || isComandante())
+        && request.resource.data.id == id
+        && request.resource.data.fullName is string
+        && request.resource.data.position is string
+        && request.resource.data.active is bool
+        && request.resource.data.updatedAt is number
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+
+    // ─── SCI Docente Simulator — sesiones reales ─────────────────────────
+    // Collections: sessions/{sessionId} and subcollections
+
+    function isSessionInstructor(sessionId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/sessions/$(sessionId))
+        && get(/databases/$(database)/documents/sessions/$(sessionId)).data.instructorUid == request.auth.uid;
+    }
+
+    function isSessionParticipant(sessionId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/sessions/$(sessionId)/participants/$(request.auth.uid));
+    }
+
+    function isActiveStudent(sessionId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/sessions/$(sessionId))
+        && get(/databases/$(database)/documents/sessions/$(sessionId)).data.activeStudentUid == request.auth.uid;
+    }
+
+    function studentDecisionIsValid() {
+      let d = request.resource.data;
+      return d.source == "student"
+          && d.evaluable == true
+          && d.visibility == "all"
+          && d.keys().hasAll(["id","timestamp","source","evaluable","visibility","decisionId","label","category","result","minute"]);
+    }
+
+    function instructorEventIsValid() {
+      let e = request.resource.data;
+      return e.source == "instructor"
+          && e.evaluable == false
+          && e.keys().hasAll(["id","timestamp","source","evaluable","visibility","type","content"]);
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.instructorUid == request.auth.uid;
+      allow update: if isSessionInstructor(sessionId)
+        || (request.auth != null
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["activeStudentUid","activeStudentName","status","updatedAt"]));
+      allow delete: if isSessionInstructor(sessionId);
+
+      match /participants/{uid} {
+        allow read: if isSessionParticipant(sessionId) || isSessionInstructor(sessionId);
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      match /studentDecisions/{decisionId} {
+        allow read: if isSessionInstructor(sessionId) || isActiveStudent(sessionId);
+        allow create: if isActiveStudent(sessionId)
+          && studentDecisionIsValid()
+          && request.resource.data.id == decisionId;
+        allow update, delete: if false;
+      }
+
+      match /instructorEvents/{eventId} {
+        allow read: if isSessionInstructor(sessionId)
+          || (isSessionParticipant(sessionId)
+              && resource.data.visibility in ["student_visible", "projector_visible"]);
+        allow create: if isSessionInstructor(sessionId)
+          && instructorEventIsValid()
+          && request.resource.data.id == eventId;
+        allow update: if isSessionInstructor(sessionId) && instructorEventIsValid();
+        allow delete: if isSessionInstructor(sessionId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

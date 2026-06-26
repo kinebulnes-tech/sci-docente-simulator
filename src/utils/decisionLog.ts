@@ -1,4 +1,4 @@
-import type { DecisionLog, DecisionActionType, DecisionSeverity } from "../types/decisionLog";
+import type { DecisionLog, DecisionActionType, DecisionSeverity, DecisionSource } from "../types/decisionLog";
 import type { TimelineEntry } from "../types/sci";
 
 let _counter = 0;
@@ -15,6 +15,23 @@ export function classifyDecision(actionType: DecisionActionType): DecisionSeveri
   return "info";
 }
 
+/**
+ * Timeline entries of type "decision" are normally student decisions, but
+ * TRANSFER_COMMAND and ACTIVATE_UNIFIED_COMMAND (instructor-only actions from
+ * InstructorPanel) also produce type:"decision" entries. Detect them by title
+ * to avoid crediting instructor actions to the student's score.
+ */
+const INSTRUCTOR_DECISION_PATTERNS = [
+  /^Transferencia de mando:/,
+  /^Mando unificado activado/,
+] as const;
+
+function classifyDecisionSource(title: string): DecisionSource {
+  return INSTRUCTOR_DECISION_PATTERNS.some((p) => p.test(title))
+    ? "instructor"
+    : "student";
+}
+
 export function deriveLogsFromTimeline(
   timeline: TimelineEntry[],
   scenarioId: string
@@ -22,8 +39,17 @@ export function deriveLogsFromTimeline(
   return timeline.map((entry, i) => {
     const actionType: DecisionActionType =
       entry.type === "inject" ? "trigger_inject" : "apply_decision";
-    const source =
-      entry.type === "inject" ? "instructor" : entry.type === "system" ? "system" : "student";
+
+    let source: DecisionSource;
+    if (entry.type === "inject") {
+      source = "instructor";
+    } else if (entry.type === "system") {
+      source = "system";
+    } else {
+      // type === "decision" — distinguish student vs instructor actions
+      source = classifyDecisionSource(entry.title);
+    }
+
     return {
       id: `tl-${scenarioId}-${i}`,
       timestamp: Date.now(),
@@ -33,7 +59,7 @@ export function deriveLogsFromTimeline(
       label: entry.title,
       source,
       severity: classifyDecision(actionType),
-      notes: entry.detail
+      notes: entry.detail,
     };
   });
 }

@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "studentDecisions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "minute", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "instructorEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

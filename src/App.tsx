@@ -7,6 +7,11 @@ import { DecisionPanel } from "./components/DecisionPanel";
 import { DoctrinePanel } from "./components/DoctrinePanel";
 import { FeedbackToast } from "./components/FeedbackToast";
 import { IcsFormViewer } from "./components/IcsFormViewer";
+import { GuidedQuestionPanel } from "./components/instructor/GuidedQuestionPanel";
+import { InstructorModePanel } from "./components/instructor/InstructorModePanel";
+import { InstructorNotesPanel } from "./components/instructor/InstructorNotesPanel";
+import { LivePerformancePanel } from "./components/instructor/LivePerformancePanel";
+import { TeachingPausePanel } from "./components/instructor/TeachingPausePanel";
 import { InstructorPanel } from "./components/InstructorPanel";
 import { MetricGrid } from "./components/MetricGrid";
 import { ObjectivePanel } from "./components/ObjectivePanel";
@@ -16,9 +21,23 @@ import { RubricPanel } from "./components/RubricPanel";
 import { ScenarioBoard } from "./components/ScenarioBoard";
 import { ScenarioSelector } from "./components/ScenarioSelector";
 import { SimulationTimeline } from "./components/SimulationTimeline";
+import { SessionLandingPanel } from "./components/session/SessionLandingPanel";
+import { CreateSessionPanel } from "./components/session/CreateSessionPanel";
+import { JoinSessionPanel } from "./components/session/JoinSessionPanel";
+import { SessionStatusBar } from "./components/session/SessionStatusBar";
+import { ParticipantsPanel } from "./components/session/ParticipantsPanel";
 import { useSimulation } from "./hooks/useSimulation";
+import { useInstructorEvents } from "./hooks/useInstructorEvents";
+import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
+import { useRealtimeSession, useFirebaseDecisionSync } from "./hooks/useRealtimeSession";
 import { scenarioMap, scenarios } from "./data/scenarios";
+import type { InstructorMode } from "./components/instructor/InstructorModePanel";
 import type { SessionConfig } from "./types/sci";
+import type { FirebaseSession } from "./types/firebaseSession";
+import type { SessionPersistenceAdapter } from "./services/sessionAdapter";
+import { getAdapter } from "./services/sessionAdapter";
+import { shouldShowLiveScore } from "./utils/sessionVisibility";
+import { isFirebaseConfigured, firebaseAuth, firebaseDb } from "./lib/firebase";
 
 // ─── Simulation screen ─────────────────────────────────────────────────────
 
@@ -27,9 +46,15 @@ interface SimulationScreenProps {
   onExit: () => void;
   projector: boolean;
   onToggleProjector: () => void;
+  onlineSession?: FirebaseSession;
+  adapter?: SessionPersistenceAdapter;
+  currentUid?: string;
 }
 
-function SimulationScreen({ config, onExit, projector, onToggleProjector }: SimulationScreenProps) {
+function SimulationScreen({
+  config, onExit, projector, onToggleProjector,
+  onlineSession, adapter, currentUid,
+}: SimulationScreenProps) {
   const {
     state, dispatch, evaluation, globalScore, rubric, role,
     feedback, clearFeedback, isCompleted, complete, clearSession,
@@ -37,9 +62,19 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
   } = useSimulation(config);
 
   const [showDebriefing, setShowDebriefing] = useState(false);
-  const isInstructor = role === "instructor";
+  const [instructorMode, setInstructorMode] = useState<InstructorMode>("full");
 
-  // Auto-show debriefing when instructor marks complete
+  const { events: instructorEvents, notes, pauses, add: addInstructorEvent, remove: removeInstructorEvent, clear: clearInstructorEventsFn } = useInstructorEvents(config.scenarioId);
+
+  // Online session sync — no-op when adapter is undefined or local
+  const sessionId = onlineSession?.id ?? null;
+  const realtimeState = useRealtimeSession(adapter ?? null, sessionId);
+  useFirebaseDecisionSync(adapter ?? null, sessionId, decisionLogs);
+
+  const isInstructor  = role === "instructor";
+  const isTeaching    = isInstructor && instructorMode === "teaching";
+  const isEvaluation  = isInstructor && instructorMode === "evaluation";
+
   useEffect(() => {
     if (isCompleted) setShowDebriefing(true);
   }, [isCompleted]);
@@ -47,7 +82,8 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
   const handleRestart = useCallback(() => {
     setShowDebriefing(false);
     clearSession();
-  }, [clearSession]);
+    clearInstructorEventsFn();
+  }, [clearSession, clearInstructorEventsFn]);
 
   if (showDebriefing && isCompleted) {
     return (
@@ -56,14 +92,28 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         evaluation={evaluationSummary}
         debriefing={debriefingData}
         logs={decisionLogs}
+        role={role}
+        instructorEvents={instructorEvents}
         onRestart={handleRestart}
         onExit={onExit}
       />
     );
   }
 
+  const isOnlineInstructor =
+    onlineSession && currentUid && onlineSession.instructorUid === currentUid;
+
   return (
-    <main className={`app-shell${projector ? " projector-mode" : ""}`}>
+    <main
+      className={[
+        "app-shell",
+        projector ? "projector-mode" : "",
+        isTeaching ? "teaching-mode" : "",
+        isEvaluation ? "evaluation-mode" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <AppHeader
         title={state.scenario.title}
         minute={state.minute}
@@ -77,6 +127,7 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         onExit={onExit}
         projector={projector}
         onToggleProjector={onToggleProjector}
+        showScore={shouldShowLiveScore(role, isCompleted)}
       />
 
       <section className="briefing-band">
@@ -102,11 +153,22 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         </div>
 
         <div className="center-stack">
-          <DecisionPanel state={state} dispatch={dispatch} />
+          <DecisionPanel state={state} dispatch={dispatch} role={role} />
         </div>
 
         <div className="right-stack">
-          {isInstructor && <InstructorPanel state={state} dispatch={dispatch} />}
+          {isInstructor && (
+            <InstructorModePanel
+              mode={instructorMode}
+              onModeChange={setInstructorMode}
+            />
+          )}
+          {isInstructor && (
+            <LivePerformancePanel state={state} globalScore={globalScore} />
+          )}
+          {isInstructor && !isEvaluation && (
+            <InstructorPanel state={state} dispatch={dispatch} />
+          )}
           <ResourcePanel resources={state.resources} />
 
           {isInstructor || isCompleted ? (
@@ -128,12 +190,58 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
       </div>
 
       <div className={`bottom-grid${!isInstructor ? " bottom-grid--single" : ""}`}>
-        <SimulationTimeline entries={state.timeline} />
+        <SimulationTimeline entries={state.timeline} role={role} />
         {isInstructor && <DoctrinePanel />}
       </div>
 
       {isInstructor && <DecisionLogPanel logs={decisionLogs} />}
       {isInstructor && <IcsFormViewer state={state} />}
+
+      {/* ── Online session panels ────────────────────────────────── */}
+      {onlineSession && adapter && currentUid && (
+        <div className="bottom-grid">
+          <SessionStatusBar
+            session={onlineSession}
+            adapter={adapter}
+            currentUid={currentUid}
+          />
+          {isOnlineInstructor && (
+            <ParticipantsPanel
+              participants={realtimeState.participants}
+              studentDecisions={realtimeState.studentDecisions}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── Teaching mode tools ─────────────────────────────────── */}
+      {isTeaching && (
+        <div className="teaching-tools-grid">
+          <GuidedQuestionPanel
+            learningObjectives={state.scenario.learningObjectives}
+            scenarioTitle={state.scenario.title}
+          />
+          <section className="panel">
+            <div className="panel-heading">
+              <p className="eyebrow">Herramientas docentes</p>
+              <h2>Notas y pausas</h2>
+            </div>
+            <TeachingPausePanel
+              pauses={pauses}
+              minute={state.minute}
+              onAdd={addInstructorEvent}
+            />
+            <div style={{ marginTop: 16 }}>
+              <InstructorNotesPanel
+                notes={notes}
+                minute={state.minute}
+                onAdd={addInstructorEvent}
+                onRemove={removeInstructorEvent}
+              />
+            </div>
+          </section>
+        </div>
+      )}
 
       <FeedbackToast feedback={feedback} onClose={clearFeedback} />
     </main>
@@ -142,35 +250,91 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
 
 // ─── Root app ──────────────────────────────────────────────────────────────
 
+type AppPhase = "local-landing" | "session-landing" | "create-session" | "join-session";
+
 export default function App() {
   const [pendingConfig, setPendingConfig] = useState<SessionConfig | null>(null);
   const [activeConfig, setActiveConfig]   = useState<SessionConfig | null>(null);
   const [projector, setProjector]         = useState(false);
 
-  const handleStart = useCallback((cfg: SessionConfig) => setPendingConfig(cfg), []);
+  // Online session state
+  const [phase, setPhase] = useState<AppPhase>(
+    isFirebaseConfigured ? "session-landing" : "local-landing"
+  );
+  const [onlineSession, setOnlineSession] = useState<FirebaseSession | null>(null);
+  const [adapter] = useState<SessionPersistenceAdapter>(() => getAdapter(firebaseDb));
+  const authState = useFirebaseAuth(isFirebaseConfigured ? firebaseAuth : null);
 
+  const handleStart    = useCallback((cfg: SessionConfig) => setPendingConfig(cfg), []);
   const handleBeginSim = useCallback(() => {
     if (!pendingConfig) return;
     setActiveConfig(pendingConfig);
     setPendingConfig(null);
   }, [pendingConfig]);
-
   const handleExit = useCallback(() => {
     setActiveConfig(null);
     setPendingConfig(null);
+    setOnlineSession(null);
+    setPhase(isFirebaseConfigured ? "session-landing" : "local-landing");
   }, []);
-
-  const handleBack = useCallback(() => setPendingConfig(null), []);
-
+  const handleBack      = useCallback(() => setPendingConfig(null), []);
   const toggleProjector = useCallback(() => setProjector((p) => !p), []);
 
-  // Fullscreen
   useEffect(() => {
     const handler = () => {};
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
+  // ── Online session: instructor creates session then picks scenario
+  const handleSessionCreated = useCallback((session: FirebaseSession, scenarioId: string) => {
+    setOnlineSession(session);
+    // Pre-select the scenario for the instructor
+    setPendingConfig({ scenarioId, role: "instructor" });
+    setPhase("local-landing");
+  }, []);
+
+  // ── Online session: student joins then goes straight to the scenario briefing
+  const handleSessionJoined = useCallback((session: FirebaseSession) => {
+    setOnlineSession(session);
+    setPendingConfig({ scenarioId: session.scenarioId, role: "alumno" });
+    setPhase("local-landing");
+  }, []);
+
+  // ── Session landing (shown when Firebase is configured)
+  if (phase === "session-landing") {
+    return (
+      <SessionLandingPanel
+        onLocalMode={() => setPhase("local-landing")}
+        onCreateSession={() => setPhase("create-session")}
+        onJoinSession={() => setPhase("join-session")}
+      />
+    );
+  }
+
+  if (phase === "create-session") {
+    return (
+      <CreateSessionPanel
+        adapter={adapter}
+        instructorUid={authState.uid ?? "local-instructor"}
+        onSessionCreated={handleSessionCreated}
+        onBack={() => setPhase("session-landing")}
+      />
+    );
+  }
+
+  if (phase === "join-session") {
+    return (
+      <JoinSessionPanel
+        adapter={adapter}
+        studentUid={authState.uid ?? "local-student"}
+        onSessionJoined={handleSessionJoined}
+        onBack={() => setPhase("session-landing")}
+      />
+    );
+  }
+
+  // ── Local / post-session flow (existing behavior preserved)
   if (!pendingConfig && !activeConfig) {
     return <ScenarioSelector onStart={handleStart} />;
   }
@@ -193,6 +357,9 @@ export default function App() {
       onExit={handleExit}
       projector={projector}
       onToggleProjector={toggleProjector}
+      onlineSession={onlineSession ?? undefined}
+      adapter={onlineSession ? adapter : undefined}
+      currentUid={authState.uid ?? undefined}
     />
   );
 }
