@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ──────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSessionInstructor(sessionId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/sessions/$(sessionId))
+        && get(/databases/$(database)/documents/sessions/$(sessionId)).data.instructorUid == request.auth.uid;
+    }
+
+    function isSessionParticipant(sessionId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/sessions/$(sessionId)/participants/$(request.auth.uid));
+    }
+
+    function isSessionStudent(sessionId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/sessions/$(sessionId))
+        && get(/databases/$(database)/documents/sessions/$(sessionId)).data.activeStudentUid == request.auth.uid;
+    }
+
+    function studentDecisionIsValid() {
+      let d = request.resource.data;
+      return d.source == "student"
+          && d.evaluable == true
+          && d.visibility == "all"
+          && d.keys().hasAll(["id","timestamp","source","evaluable","visibility","decisionId","label","category","result","minute"]);
+    }
+
+    function instructorEventIsValid() {
+      let e = request.resource.data;
+      return e.source == "instructor"
+          && e.evaluable == false
+          && e.keys().hasAll(["id","timestamp","source","evaluable","visibility","type","content"]);
+    }
+
+    // ─── Sessions ──────────────────────────────────────────────────────────
+
+    match /sessions/{sessionId} {
+      // Authenticated users can read sessions (needed to join by code via query)
+      allow read: if isAuthenticated();
+
+      // Only the creator (instructor) can create a new session
+      allow create: if isAuthenticated()
+        && request.resource.data.instructorUid == request.auth.uid;
+
+      // Only the instructor can update session metadata (status, mode, etc.)
+      allow update: if isSessionInstructor(sessionId)
+        // Students can update activeStudentUid/Name when joining
+        || (isAuthenticated()
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["activeStudentUid","activeStudentName","status","updatedAt"]));
+
+      // Only instructor can delete/close
+      allow delete: if isSessionInstructor(sessionId);
+
+      // ─── Participants ────────────────────────────────────────────────────
+
+      match /participants/{uid} {
+        // Participants can read all participant docs in their session
+        allow read: if isSessionParticipant(sessionId) || isSessionInstructor(sessionId);
+
+        // Users can only write their own participant doc
+        allow write: if isAuthenticated() && request.auth.uid == uid;
+      }
+
+      // ─── Student decisions ───────────────────────────────────────────────
+
+      match /studentDecisions/{decisionId} {
+        // Instructor and the active student can read decisions
+        allow read: if isSessionInstructor(sessionId) || isSessionStudent(sessionId);
+
+        // Only the active student can create decisions — validated shape enforced
+        allow create: if isSessionStudent(sessionId)
+          && studentDecisionIsValid()
+          && request.resource.data.id == decisionId;
+
+        // Decisions are immutable once created
+        allow update, delete: if false;
+      }
+
+      // ─── Instructor events ───────────────────────────────────────────────
+
+      match /instructorEvents/{eventId} {
+        // Instructor sees all; students see only student_visible / projector_visible
+        allow read: if isSessionInstructor(sessionId)
+          || (isSessionStudent(sessionId)
+              && resource.data.visibility in ["student_visible", "projector_visible"]);
+
+        // Only instructor can write instructor events — validated shape enforced
+        allow create: if isSessionInstructor(sessionId)
+          && instructorEventIsValid()
+          && request.resource.data.id == eventId;
+
+        allow update: if isSessionInstructor(sessionId) && instructorEventIsValid();
+        allow delete: if isSessionInstructor(sessionId);
+      }
+    }
+  }
+}

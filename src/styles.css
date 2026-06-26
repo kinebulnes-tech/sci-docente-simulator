@@ -1895,3 +1895,108 @@ p {
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
   white-space: nowrap;
 }
+
+/* ─── Fase 8: Session landing ─────────────────────────────────────────────── */
+.session-landing {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--surface-strong); padding: 24px;
+}
+.session-landing__card {
+  background: var(--surface); border-radius: 16px; padding: 40px;
+  box-shadow: var(--shadow); max-width: 580px; width: 100%;
+}
+.session-landing__header { margin-bottom: 32px; }
+.session-landing__subtitle { color: var(--text-soft); margin: 8px 0 0; line-height: 1.5; }
+.session-landing__options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.session-landing__actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+.session-option-btn {
+  display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+  border: 2px solid var(--line); border-radius: 12px; background: var(--surface);
+  text-align: left; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.session-option-btn:hover { border-color: var(--blue); background: #f0f6ff; }
+.session-option-btn--local:hover  { border-color: var(--text-soft); background: var(--surface-strong); }
+.session-option-btn--create:hover { border-color: var(--green); background: #f0faf4; }
+.session-option-btn--join:hover   { border-color: var(--blue); background: #f0f6ff; }
+.session-option-btn__icon { font-size: 28px; flex-shrink: 0; }
+.session-option-btn strong { display: block; font-size: 15px; color: var(--ink); margin-bottom: 2px; }
+.session-option-btn p { margin: 0; font-size: 13px; color: var(--text-soft); line-height: 1.4; }
+
+/* ─── Join code display ───────────────────────────────────────────────────── */
+.join-code-display {
+  font-size: 48px; font-weight: 900; letter-spacing: 0.15em; text-align: center;
+  color: var(--navy); background: var(--surface-strong); border-radius: 12px;
+  padding: 24px; margin: 24px 0; font-variant-numeric: tabular-nums;
+}
+.session-info-line { text-align: center; color: var(--text-soft); font-size: 13px; }
+
+/* ─── Forms ───────────────────────────────────────────────────────────────── */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-soft); margin-bottom: 6px; }
+.form-input {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 8px;
+  font-size: 15px; color: var(--ink); background: var(--surface); outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--blue); }
+.form-input--code { font-size: 22px; font-weight: 700; letter-spacing: 0.15em; text-align: center; }
+.form-hint { font-size: 12px; color: var(--text-soft); margin: 4px 0 0; }
+.form-error { color: var(--red); font-size: 13px; margin: 8px 0 0; }
+
+/* ─── Mode selector ───────────────────────────────────────────────────────── */
+.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mode-btn {
+  display: flex; flex-direction: column; padding: 12px; border: 1.5px solid var(--line);
+  border-radius: 8px; background: var(--surface); cursor: pointer; text-align: left;
+  transition: border-color 0.15s;
+}
+.mode-btn:hover  { border-color: var(--blue); }
+.mode-btn--active { border-color: var(--blue); background: #f0f6ff; }
+.mode-btn strong { font-size: 13px; color: var(--ink); }
+.mode-btn span   { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+
+/* ─── Session status bar ──────────────────────────────────────────────────── */
+.session-status-bar {
+  display: flex; align-items: center; gap: 16px; padding: 10px 20px;
+  background: var(--navy); color: #fff; border-radius: 10px; font-size: 13px;
+  flex-wrap: wrap;
+}
+.session-status-bar__code strong { font-size: 15px; letter-spacing: 0.1em; }
+.session-status-bar__scenario { flex: 1; color: rgba(255,255,255,0.7); }
+.session-status-bar__status { padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 11px; }
+.session-status-bar__status--waiting   { background: var(--amber); }
+.session-status-bar__status--active    { background: var(--green); }
+.session-status-bar__status--completed { background: var(--text-soft); }
+.session-status-bar__status--closed    { background: var(--red); }
+.session-status-bar__role   { font-weight: 600; }
+.session-status-bar__adapter { opacity: 0.7; }
+
+/* ─── Participants panel ──────────────────────────────────────────────────── */
+.participants-panel__empty { color: var(--text-soft); font-size: 13px; }
+.participants-panel__list  { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.participants-panel__item  { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--surface-strong); }
+.participants-panel__name  { flex: 1; font-weight: 600; font-size: 13px; }
+.participants-panel__role-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--blue); color: #fff; }
+.participants-panel__item--instructor .participants-panel__role-badge { background: var(--navy); }
+.participants-panel__seen  { font-size: 11px; color: var(--text-soft); }
+.participants-panel__decisions { margin-top: 16px; }
+.participants-panel__decisions-heading { font-size: 12px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.participants-panel__decisions-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.participants-panel__decision-item { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.decision-minute { color: var(--text-soft); min-width: 40px; }
+.decision-label  { flex: 1; }
+.decision-result--applied  { color: var(--green); font-weight: 700; }
+.decision-result--blocked  { color: var(--red); font-weight: 700; }
+.decision-result--repeated { color: var(--amber); font-weight: 700; }
+
+/* ─── Buttons (shared) ────────────────────────────────────────────────────── */
+.btn {
+  padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  border: none; cursor: pointer; transition: opacity 0.15s;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary   { background: var(--blue); color: #fff; }
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-secondary { background: var(--surface-strong); color: var(--ink); border: 1.5px solid var(--line); }
+.btn-secondary:hover:not(:disabled) { background: var(--line); }
