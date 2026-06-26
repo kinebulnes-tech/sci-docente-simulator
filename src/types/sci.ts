@@ -18,7 +18,7 @@ export type IncidentType =
   | "evento_masivo"
   | "multiagencia";
 
-export type ScenarioDifficulty = "basico" | "intermedio" | "avanzado";
+export type ScenarioDifficulty = "basico" | "intermedio" | "avanzado" | "experto";
 
 export type DecisionCategory =
   | "mando"

@@ -3,20 +3,19 @@ import { useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { OrthographicCamera } from "three";
+import { getCameraPreset } from "../../utils/cameraPresets";
 import { recommendedZoom } from "../../utils/scene3d";
 
 interface CameraControllerProps {
   resetSignal: number;
+  preset?: string;
 }
 
-const INITIAL_POS: [number, number, number] = [12, 10, 12];
-
 /**
- * Manages OrbitControls + responsive zoom.
+ * Manages OrbitControls + responsive zoom + camera presets.
  * Must live inside <Canvas> to access useThree().
- * resetSignal increment triggers camera reset to initial isometric position.
  */
-export function CameraController({ resetSignal }: CameraControllerProps) {
+export function CameraController({ resetSignal, preset = "general" }: CameraControllerProps) {
   const { camera, size } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -27,9 +26,20 @@ export function CameraController({ resetSignal }: CameraControllerProps) {
   }, [size.width, size.height, camera]);
 
   useEffect(() => {
-    if (resetSignal <= 0) return;
+    const p = getCameraPreset(preset);
     const ortho = camera as OrthographicCamera;
-    camera.position.set(...INITIAL_POS);
+    camera.position.set(...p.position);
+    controlsRef.current?.target.set(...p.target);
+    ortho.zoom = recommendedZoom(size.width, size.height);
+    ortho.updateProjectionMatrix();
+    controlsRef.current?.update();
+  }, [preset, camera, size.width, size.height]);
+
+  useEffect(() => {
+    if (resetSignal <= 0) return;
+    const p = getCameraPreset("general");
+    const ortho = camera as OrthographicCamera;
+    camera.position.set(...p.position);
     ortho.zoom = recommendedZoom(size.width, size.height);
     ortho.updateProjectionMatrix();
     controlsRef.current?.reset();

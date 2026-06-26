@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { scenarios } from "../data/scenarios";
 import type { SessionConfig, SessionRole } from "../types/sci";
+import {
+  groupScenariosByDifficulty,
+  sortScenariosByDifficulty,
+} from "../utils/scenarioSorting";
 
 interface ScenarioSelectorProps {
   onStart: (config: SessionConfig) => void;
@@ -14,17 +18,23 @@ const INCIDENT_TYPE_LABEL: Record<string, string> = {
   evacuacion: "Evacuación masiva",
   sar: "Búsqueda y rescate",
   evento_masivo: "Evento masivo",
-  multiagencia: "Multiagencia"
+  multiagencia: "Multiagencia",
 };
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   basico: "Básico",
   intermedio: "Intermedio",
-  avanzado: "Avanzado"
+  avanzado: "Avanzado",
+  experto: "Experto",
 };
 
+const DIFFICULTY_ORDER = ["basico", "intermedio", "avanzado", "experto"];
+
+const sorted = sortScenariosByDifficulty(scenarios);
+const grouped = groupScenariosByDifficulty(sorted);
+
 export function ScenarioSelector({ onStart }: ScenarioSelectorProps) {
-  const [scenarioId, setScenarioId] = useState(scenarios[0].id);
+  const [scenarioId, setScenarioId] = useState(sorted[0].id);
   const [role, setRole] = useState<SessionRole | null>(null);
 
   function handleStart() {
@@ -37,32 +47,44 @@ export function ScenarioSelector({ onStart }: ScenarioSelectorProps) {
       <header className="selector-header">
         <p className="eyebrow">SCI Trainer</p>
         <h1>Sistema de Comando de Incidentes</h1>
-        <p className="selector-subtitle">Simulador docente interactivo · Selecciona escenario y rol para comenzar</p>
+        <p className="selector-subtitle">
+          Simulador docente interactivo · Selecciona escenario y rol para comenzar
+        </p>
       </header>
 
       <div className="selector-body">
         <section className="selector-section">
           <h2>Escenario de ejercicio</h2>
           <div className="scenario-option-list">
-            {scenarios.map((scenario) => (
-              <button
-                key={scenario.id}
-                className={`scenario-option ${scenarioId === scenario.id ? "selected" : ""}`}
-                onClick={() => setScenarioId(scenario.id)}
-              >
-                <div className="scenario-option-top">
-                  <strong>{scenario.title}</strong>
-                  <div className="scenario-tags">
-                    <span className="scenario-type-tag">
-                      {INCIDENT_TYPE_LABEL[scenario.type] ?? scenario.type}
-                    </span>
-                    <span className={`scenario-difficulty-tag difficulty-${scenario.difficulty}`}>
-                      {DIFFICULTY_LABEL[scenario.difficulty] ?? scenario.difficulty}
-                    </span>
-                  </div>
+            {DIFFICULTY_ORDER.filter((d) => grouped.has(d)).map((difficulty) => (
+              <div key={difficulty} className="scenario-difficulty-group">
+                <div className="scenario-group-header">
+                  <span className={`scenario-difficulty-tag difficulty-${difficulty}`}>
+                    {DIFFICULTY_LABEL[difficulty] ?? difficulty}
+                  </span>
+                  <span className="scenario-group-count">
+                    {grouped.get(difficulty)!.length} caso
+                    {grouped.get(difficulty)!.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-                <p>{scenario.summary}</p>
-              </button>
+                {grouped.get(difficulty)!.map((scenario) => (
+                  <button
+                    key={scenario.id}
+                    className={`scenario-option ${scenarioId === scenario.id ? "selected" : ""}`}
+                    onClick={() => setScenarioId(scenario.id)}
+                  >
+                    <div className="scenario-option-top">
+                      <strong>{scenario.title}</strong>
+                      <div className="scenario-tags">
+                        <span className="scenario-type-tag">
+                          {INCIDENT_TYPE_LABEL[scenario.type] ?? scenario.type}
+                        </span>
+                      </div>
+                    </div>
+                    <p>{scenario.summary}</p>
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         </section>
@@ -75,14 +97,19 @@ export function ScenarioSelector({ onStart }: ScenarioSelectorProps) {
               onClick={() => setRole("instructor")}
             >
               <strong>Instructor</strong>
-              <p>Control total: inyecta eventos, controla tiempo, evalúa decisiones y ve la rúbrica completa.</p>
+              <p>
+                Control total: inyecta eventos, controla tiempo, evalúa decisiones y ve la rúbrica
+                completa.
+              </p>
             </button>
             <button
               className={`role-option ${role === "alumno" ? "selected" : ""}`}
               onClick={() => setRole("alumno")}
             >
               <strong>Alumno</strong>
-              <p>Toma de decisiones en tiempo real. La rúbrica se revela al finalizar el ejercicio.</p>
+              <p>
+                Toma de decisiones en tiempo real. La rúbrica se revela al finalizar el ejercicio.
+              </p>
             </button>
           </div>
         </section>

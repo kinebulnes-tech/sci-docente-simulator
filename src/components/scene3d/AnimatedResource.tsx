@@ -1,36 +1,36 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Mesh } from "three";
+import type { Group } from "three";
 import { resourceAnimationType } from "../../utils/scene3d";
 import type { VisualResource } from "../../utils/scene3d";
+import { ResourceModel3D } from "./ResourceModel3D";
 
 interface AnimatedResourceProps {
   resource: VisualResource;
+  animated?: boolean;
 }
 
 /**
- * Cylinder representing a single resource.
- * - solicitado (en ruta): vertical bounce animation
+ * Animated wrapper for ResourceModel3D.
+ * - solicitado (en ruta): vertical bounce
  * - desmovilizado: scaled down + low opacity (static)
- * - others: static cylinder
+ * - others: static at full scale
  */
-export function AnimatedResource({ resource }: AnimatedResourceProps) {
-  const meshRef = useRef<Mesh>(null);
+export function AnimatedResource({ resource, animated = true }: AnimatedResourceProps) {
+  const groupRef = useRef<Group>(null);
   const anim = resourceAnimationType(resource.status);
   const phase = (resource.id.charCodeAt(0) + resource.id.charCodeAt(resource.id.length - 1)) * 0.41;
-
-  useFrame(({ clock }) => {
-    if (!meshRef.current || anim !== "route") return;
-    const t = clock.getElapsedTime();
-    meshRef.current.position.y = resource.position[1] + 0.09 * Math.abs(Math.sin(t * 2.8 + phase));
-  });
-
   const scale: [number, number, number] = anim === "demob" ? [0.75, 0.75, 0.75] : [1, 1, 1];
 
+  useFrame(({ clock }) => {
+    if (!groupRef.current || anim !== "route" || !animated) return;
+    const t = clock.getElapsedTime();
+    groupRef.current.position.y = resource.position[1] + 0.09 * Math.abs(Math.sin(t * 2.8 + phase));
+  });
+
   return (
-    <mesh ref={meshRef} position={resource.position} scale={scale}>
-      <cylinderGeometry args={[0.28, 0.35, 0.7, 8]} />
-      <meshLambertMaterial color={resource.color} transparent opacity={resource.opacity} />
-    </mesh>
+    <group ref={groupRef} position={resource.position}>
+      <ResourceModel3D resource={resource} scale={scale} />
+    </group>
   );
 }
