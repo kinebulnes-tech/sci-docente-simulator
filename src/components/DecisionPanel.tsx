@@ -1,11 +1,12 @@
 import { useState } from "react";
 import type { Dispatch } from "react";
 import { CheckCircle2, Filter, LockKeyhole } from "lucide-react";
-import type { DecisionCategory, ScenarioDecision, SimulationAction, SimulationState } from "../types/sci";
+import type { DecisionCategory, ScenarioDecision, SessionRole, SimulationAction, SimulationState } from "../types/sci";
 
 interface DecisionPanelProps {
   state: SimulationState;
   dispatch: Dispatch<SimulationAction>;
+  role: SessionRole;
 }
 
 const CATEGORY_LABELS: Record<DecisionCategory, string> = {
@@ -30,7 +31,8 @@ function isTimed(decision: ScenarioDecision, minute: number) {
   return "early";
 }
 
-export function DecisionPanel({ state, dispatch }: DecisionPanelProps) {
+export function DecisionPanel({ state, dispatch, role }: DecisionPanelProps) {
+  const showHints = role === "instructor";
   const [activeFilter, setActiveFilter] = useState<DecisionCategory | "todos">("todos");
 
   const categories = Array.from(
@@ -54,7 +56,7 @@ export function DecisionPanel({ state, dispatch }: DecisionPanelProps) {
       <div className="panel-heading">
         <div>
           <h2>Decisiones disponibles</h2>
-          {criticalPending > 0 && (
+          {showHints && criticalPending > 0 && (
             <p className="decision-pending-hint">
               {criticalPending} decisión(es) recomendada(s) en el minuto actual
             </p>
@@ -116,7 +118,7 @@ export function DecisionPanel({ state, dispatch }: DecisionPanelProps) {
                 {selected && (
                   <span className="decision-registered-tag">Registrada</span>
                 )}
-                {!selected && timing === "now" && !locked && (
+                {showHints && !selected && timing === "now" && !locked && (
                   <span className="decision-recommended-tag">Recomendada ahora</span>
                 )}
               </div>

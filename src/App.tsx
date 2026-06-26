@@ -25,6 +25,7 @@ import { useSimulation } from "./hooks/useSimulation";
 import { scenarioMap, scenarios } from "./data/scenarios";
 import type { InstructorMode } from "./components/instructor/InstructorModePanel";
 import type { SessionConfig } from "./types/sci";
+import { shouldShowLiveScore } from "./utils/sessionVisibility";
 
 // ─── Simulation screen ─────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         onExit={onExit}
         projector={projector}
         onToggleProjector={onToggleProjector}
+        showScore={shouldShowLiveScore(role, isCompleted)}
       />
 
       <section className="briefing-band">
@@ -120,7 +122,7 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         </div>
 
         <div className="center-stack">
-          <DecisionPanel state={state} dispatch={dispatch} />
+          <DecisionPanel state={state} dispatch={dispatch} role={role} />
         </div>
 
         <div className="right-stack">

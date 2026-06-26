@@ -123,13 +123,37 @@ describe("decisionLog utilities", () => {
       expect(logs[2].source).toBe("system");
     });
 
-    it("assigns student source to decision entries", () => {
+    it("assigns student source to normal decision entries", () => {
       const logs = deriveLogsFromTimeline(timeline, "sc1");
       expect(logs[0].source).toBe("student");
     });
 
     it("returns empty array for empty timeline", () => {
       expect(deriveLogsFromTimeline([], "sc1")).toHaveLength(0);
+    });
+
+    it("classifica TRANSFER_COMMAND como source instructor (no student)", () => {
+      const tl: TimelineEntry[] = [
+        { minute: 8, type: "decision", title: "Transferencia de mando: CI → Cap. García", detail: "formal" }
+      ];
+      const logs = deriveLogsFromTimeline(tl, "sc1");
+      expect(logs[0].source).toBe("instructor");
+    });
+
+    it("classifica ACTIVATE_UNIFIED_COMMAND como source instructor", () => {
+      const tl: TimelineEntry[] = [
+        { minute: 12, type: "decision", title: "Mando unificado activado", detail: "agencias" }
+      ];
+      const logs = deriveLogsFromTimeline(tl, "sc1");
+      expect(logs[0].source).toBe("instructor");
+    });
+
+    it("mantiene source student para decisiones que no son del instructor", () => {
+      const tl: TimelineEntry[] = [
+        { minute: 3, type: "decision", title: "Establecer perímetro de seguridad", detail: "ok" }
+      ];
+      const logs = deriveLogsFromTimeline(tl, "sc1");
+      expect(logs[0].source).toBe("student");
     });
   });
 });
