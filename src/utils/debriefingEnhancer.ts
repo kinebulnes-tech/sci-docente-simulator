@@ -35,9 +35,12 @@ export function buildAar(
     .map((e) => `T+${e.minute}m — ${e.title}`);
   if (keyMoments.length > 0) happenedItems.push(...keyMoments);
 
+  // "Qué se decidió" = student actions only; instructor/system events are evidence,
+  // not decisions the alumno is accountable for.
+  const studentLogs = logs.filter((l) => l.source === "student");
   const decidedItems =
-    logs.length > 0
-      ? logs.map((l) => `T+${l.minute}m — [${l.source}] ${l.label}`)
+    studentLogs.length > 0
+      ? studentLogs.map((l) => `T+${l.minute}m — ${l.label}`)
       : ["Sin decisiones registradas en la bitácora"];
 
   const teachingRecs: string[] = [];

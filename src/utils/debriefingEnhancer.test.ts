@@ -78,6 +78,47 @@ describe("buildAar", () => {
     expect(aar.decided.points[0]).toContain("Sin decisiones");
   });
 
+  it("decided excluye acciones del instructor (source:instructor)", () => {
+    const mixedLogs: DecisionLog[] = [
+      ...logs,
+      {
+        id: "l-inst", timestamp: 0, minute: 8, scenarioId: "inc-01",
+        actionType: "apply_decision", label: "Transferencia de mando: CI → Cap. García",
+        source: "instructor", severity: "info",
+      },
+    ];
+    const aar = buildAar(mockData, mixedLogs, timeline);
+    const decidedText = aar.decided.points.join("\n");
+    expect(decidedText).toContain("Asumir mando");
+    expect(decidedText).not.toContain("Transferencia de mando");
+  });
+
+  it("decided excluye eventos de sistema (source:system)", () => {
+    const withSystem: DecisionLog[] = [
+      ...logs,
+      {
+        id: "l-sys", timestamp: 0, minute: 0, scenarioId: "inc-01",
+        actionType: "apply_decision", label: "Inicio de simulación",
+        source: "system", severity: "info",
+      },
+    ];
+    const aar = buildAar(mockData, withSystem, timeline);
+    const decidedText = aar.decided.points.join("\n");
+    expect(decidedText).not.toContain("Inicio de simulación");
+  });
+
+  it("decided muestra vacío cuando todos los logs son del instructor", () => {
+    const instructorOnly: DecisionLog[] = [
+      {
+        id: "l-i1", timestamp: 0, minute: 5, scenarioId: "inc-01",
+        actionType: "apply_decision", label: "Mando unificado activado",
+        source: "instructor", severity: "info",
+      },
+    ];
+    const aar = buildAar(mockData, instructorOnly, timeline);
+    expect(aar.decided.points[0]).toContain("Sin decisiones");
+  });
+
   it("wentWell refleja las fortalezas", () => {
     const aar = buildAar(mockData, [], []);
     expect(aar.wentWell.points).toContain("Mando oportuno");

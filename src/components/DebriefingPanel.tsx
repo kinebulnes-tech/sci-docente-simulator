@@ -8,7 +8,7 @@ import {
   ClipboardList,
   GraduationCap,
 } from "lucide-react";
-import type { SimulationState } from "../types/sci";
+import type { SessionRole, SimulationState } from "../types/sci";
 import type { EvaluationSummary } from "../types/evaluation";
 import type { DecisionLog } from "../types/decisionLog";
 import type { DebriefingData } from "../utils/debriefing";
@@ -29,6 +29,7 @@ interface DebriefingPanelProps {
   evaluation: EvaluationSummary;
   debriefing: DebriefingData;
   logs: DecisionLog[];
+  role: SessionRole;
   onRestart: () => void;
   onExit: () => void;
 }
@@ -49,9 +50,11 @@ export function DebriefingPanel({
   evaluation,
   debriefing,
   logs,
+  role,
   onRestart,
   onExit,
 }: DebriefingPanelProps) {
+  const isInstructor = role === "instructor";
   const [notes, setNotes] = useState("");
   const [tab, setTab]     = useState<DebriefTab>("resumen");
 
@@ -113,21 +116,23 @@ export function DebriefingPanel({
           <>
             <EvaluationSummaryPanel summary={evaluation} />
 
-            <section className="panel debriefing-notes-section">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">Instructor</p>
-                  <h2>Observaciones finales</h2>
+            {isInstructor && (
+              <section className="panel debriefing-notes-section">
+                <div className="panel-heading">
+                  <div>
+                    <p className="eyebrow">Instructor</p>
+                    <h2>Observaciones finales</h2>
+                  </div>
                 </div>
-              </div>
-              <textarea
-                className="instructor-notes-input"
-                placeholder="Escribe tus observaciones y recomendaciones para el alumno…"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-              />
-            </section>
+                <textarea
+                  className="instructor-notes-input"
+                  placeholder="Escribe tus observaciones y recomendaciones para el alumno…"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                />
+              </section>
+            )}
 
             <ExportPanel
               state={state}
@@ -148,21 +153,23 @@ export function DebriefingPanel({
                 <h2>After Action Review (AAR)</h2>
               </div>
               <div className="aar-copy-btns">
-                <button
-                  className="icon-button"
-                  onClick={copyInstructor.copy}
-                  title="Copiar resumen para el instructor"
-                >
-                  <ClipboardList size={15} />
-                  {copyInstructor.copied ? "¡Copiado!" : "Resumen docente"}
-                </button>
+                {isInstructor && (
+                  <button
+                    className="icon-button"
+                    onClick={copyInstructor.copy}
+                    title="Copiar resumen para el instructor"
+                  >
+                    <ClipboardList size={15} />
+                    {copyInstructor.copied ? "¡Copiado!" : "Resumen docente"}
+                  </button>
+                )}
                 <button
                   className="icon-button"
                   onClick={copyStudent.copy}
-                  title="Copiar retroalimentación para el alumno"
+                  title="Copiar mi retroalimentación"
                 >
                   <GraduationCap size={15} />
-                  {copyStudent.copied ? "¡Copiado!" : "Feedback alumno"}
+                  {copyStudent.copied ? "¡Copiado!" : "Mi feedback"}
                 </button>
                 <button
                   className="icon-button"

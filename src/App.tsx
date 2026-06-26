@@ -66,6 +66,7 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         evaluation={evaluationSummary}
         debriefing={debriefingData}
         logs={decisionLogs}
+        role={role}
         onRestart={handleRestart}
         onExit={onExit}
       />
