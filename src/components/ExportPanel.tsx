@@ -2,6 +2,7 @@ import { Download } from "lucide-react";
 import type { SimulationState } from "../types/sci";
 import type { DecisionLog } from "../types/decisionLog";
 import type { EvaluationSummary } from "../types/evaluation";
+import type { InstructorEvent } from "../types/sessionEvents";
 import type { DebriefingData } from "../utils/debriefing";
 import { exportDecisionsCSV, exportDebriefingMarkdown, exportSessionJSON } from "../utils/exportSession";
 
@@ -11,9 +12,10 @@ interface ExportPanelProps {
   debriefing: DebriefingData;
   logs: DecisionLog[];
   instructorNotes: string;
+  instructorEvents?: InstructorEvent[];
 }
 
-export function ExportPanel({ state, evaluation, debriefing, logs, instructorNotes }: ExportPanelProps) {
+export function ExportPanel({ state, evaluation, debriefing, logs, instructorNotes, instructorEvents = [] }: ExportPanelProps) {
   return (
     <section className="panel export-panel">
       <div className="panel-heading">
@@ -25,7 +27,7 @@ export function ExportPanel({ state, evaluation, debriefing, logs, instructorNot
       <div className="export-buttons">
         <button
           className="secondary-button"
-          onClick={() => exportSessionJSON(state, evaluation, logs)}
+          onClick={() => exportSessionJSON(state, evaluation, logs, instructorEvents)}
           title="Exportar sesión completa como JSON"
         >
           <Download size={16} />

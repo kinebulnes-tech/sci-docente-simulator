@@ -22,6 +22,7 @@ import { ScenarioBoard } from "./components/ScenarioBoard";
 import { ScenarioSelector } from "./components/ScenarioSelector";
 import { SimulationTimeline } from "./components/SimulationTimeline";
 import { useSimulation } from "./hooks/useSimulation";
+import { useInstructorEvents } from "./hooks/useInstructorEvents";
 import { scenarioMap, scenarios } from "./data/scenarios";
 import type { InstructorMode } from "./components/instructor/InstructorModePanel";
 import type { SessionConfig } from "./types/sci";
@@ -43,8 +44,10 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
     decisionLogs, evaluationSummary, debriefingData
   } = useSimulation(config);
 
-  const [showDebriefing, setShowDebriefing]     = useState(false);
-  const [instructorMode, setInstructorMode]     = useState<InstructorMode>("full");
+  const [showDebriefing, setShowDebriefing] = useState(false);
+  const [instructorMode, setInstructorMode] = useState<InstructorMode>("full");
+
+  const { events: instructorEvents, notes, pauses, add: addInstructorEvent, remove: removeInstructorEvent, clear: clearInstructorEventsFn } = useInstructorEvents(config.scenarioId);
 
   const isInstructor  = role === "instructor";
   const isTeaching    = isInstructor && instructorMode === "teaching";
@@ -57,7 +60,8 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
   const handleRestart = useCallback(() => {
     setShowDebriefing(false);
     clearSession();
-  }, [clearSession]);
+    clearInstructorEventsFn();
+  }, [clearSession, clearInstructorEventsFn]);
 
   if (showDebriefing && isCompleted) {
     return (
@@ -67,6 +71,7 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         debriefing={debriefingData}
         logs={decisionLogs}
         role={role}
+        instructorEvents={instructorEvents}
         onRestart={handleRestart}
         onExit={onExit}
       />
@@ -160,7 +165,7 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
       </div>
 
       <div className={`bottom-grid${!isInstructor ? " bottom-grid--single" : ""}`}>
-        <SimulationTimeline entries={state.timeline} />
+        <SimulationTimeline entries={state.timeline} role={role} />
         {isInstructor && <DoctrinePanel />}
       </div>
 
@@ -179,9 +184,18 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
               <p className="eyebrow">Herramientas docentes</p>
               <h2>Notas y pausas</h2>
             </div>
-            <TeachingPausePanel minute={state.minute} />
+            <TeachingPausePanel
+              pauses={pauses}
+              minute={state.minute}
+              onAdd={addInstructorEvent}
+            />
             <div style={{ marginTop: 16 }}>
-              <InstructorNotesPanel />
+              <InstructorNotesPanel
+                notes={notes}
+                minute={state.minute}
+                onAdd={addInstructorEvent}
+                onRemove={removeInstructorEvent}
+              />
             </div>
           </section>
         </div>

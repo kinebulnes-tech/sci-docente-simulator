@@ -1,17 +1,40 @@
 import { describe, expect, it } from "vitest";
 import type { DecisionLog } from "../types/decisionLog";
+import type { InstructorEvent } from "../types/sessionEvents";
 import {
   filterEvaluableLogs,
+  filterEvaluableEvents,
+  filterEventsForInstructor,
+  filterEventsForProjector,
+  filterEventsForStudent,
   filterLogsForInstructor,
   filterLogsForStudent,
   isEvaluable,
+  isInstructorOnly,
   isProjectorSafe,
+  isProjectorVisible,
+  isStudentVisible,
   shouldShowDecisionHints,
   shouldShowInstructorTools,
   shouldShowLiveScore,
   shouldShowRubric,
   shouldShowTeachingTools,
 } from "./sessionVisibility";
+
+function makeEvent(
+  id: string,
+  visibility: InstructorEvent["visibility"] = "instructor_only",
+  type: InstructorEvent["type"] = "note"
+): InstructorEvent {
+  return {
+    id,
+    timestamp: 0,
+    type,
+    content: `Event ${id}`,
+    visibility,
+    evaluable: false,
+  };
+}
 
 function makeLog(
   source: DecisionLog["source"],
@@ -170,5 +193,96 @@ describe("isProjectorSafe", () => {
   it("full y teaching no son proyector-safe", () => {
     expect(isProjectorSafe("full")).toBe(false);
     expect(isProjectorSafe("teaching")).toBe(false);
+  });
+});
+
+// ─── InstructorEvent visibility ────────────────────────────────────────────
+
+describe("isInstructorOnly", () => {
+  it("true para instructor_only", () => {
+    expect(isInstructorOnly(makeEvent("e1", "instructor_only"))).toBe(true);
+  });
+
+  it("false para student_visible", () => {
+    expect(isInstructorOnly(makeEvent("e2", "student_visible"))).toBe(false);
+  });
+
+  it("false para projector_visible", () => {
+    expect(isInstructorOnly(makeEvent("e3", "projector_visible"))).toBe(false);
+  });
+});
+
+describe("isStudentVisible", () => {
+  it("true para student_visible", () => {
+    expect(isStudentVisible(makeEvent("e1", "student_visible"))).toBe(true);
+  });
+
+  it("true para projector_visible", () => {
+    expect(isStudentVisible(makeEvent("e2", "projector_visible"))).toBe(true);
+  });
+
+  it("false para instructor_only", () => {
+    expect(isStudentVisible(makeEvent("e3", "instructor_only"))).toBe(false);
+  });
+});
+
+describe("isProjectorVisible", () => {
+  it("true solo para projector_visible", () => {
+    expect(isProjectorVisible(makeEvent("e1", "projector_visible"))).toBe(true);
+  });
+
+  it("false para student_visible", () => {
+    expect(isProjectorVisible(makeEvent("e2", "student_visible"))).toBe(false);
+  });
+
+  it("false para instructor_only", () => {
+    expect(isProjectorVisible(makeEvent("e3", "instructor_only"))).toBe(false);
+  });
+});
+
+describe("filterEvaluableEvents", () => {
+  it("InstructorEvent nunca es evaluable — retorna array vacío", () => {
+    const events = [
+      makeEvent("e1", "instructor_only"),
+      makeEvent("e2", "student_visible"),
+    ];
+    expect(filterEvaluableEvents(events)).toHaveLength(0);
+  });
+});
+
+describe("filterEventsForStudent", () => {
+  it("alumno no ve eventos instructor_only", () => {
+    const events = [
+      makeEvent("e1", "instructor_only"),
+      makeEvent("e2", "student_visible"),
+      makeEvent("e3", "projector_visible"),
+    ];
+    const visible = filterEventsForStudent(events);
+    expect(visible).toHaveLength(2);
+    expect(visible.every((e) => e.visibility !== "instructor_only")).toBe(true);
+  });
+});
+
+describe("filterEventsForInstructor", () => {
+  it("instructor ve todos los eventos sin filtro", () => {
+    const events = [
+      makeEvent("e1", "instructor_only"),
+      makeEvent("e2", "student_visible"),
+      makeEvent("e3", "projector_visible"),
+    ];
+    expect(filterEventsForInstructor(events)).toHaveLength(3);
+  });
+});
+
+describe("filterEventsForProjector", () => {
+  it("proyector solo ve projector_visible", () => {
+    const events = [
+      makeEvent("e1", "instructor_only"),
+      makeEvent("e2", "student_visible"),
+      makeEvent("e3", "projector_visible"),
+    ];
+    const visible = filterEventsForProjector(events);
+    expect(visible).toHaveLength(1);
+    expect(visible[0].id).toBe("e3");
   });
 });

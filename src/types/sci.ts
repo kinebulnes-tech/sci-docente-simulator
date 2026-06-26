@@ -146,11 +146,20 @@ export interface Scenario {
   rubric: RubricItem[];
 }
 
+export type TimelineSource = "student" | "instructor" | "system";
+export type TimelineVisibility = "student" | "instructor" | "all";
+
 export interface TimelineEntry {
   minute: number;
   type: "decision" | "inject" | "system" | "score";
   title: string;
   detail: string;
+  // Metadata added in Fase 7; optional so old localStorage sessions don't break.
+  // Use normalizeTimelineEntry() from timelineMetadata.ts when source/evaluable
+  // need to be guaranteed present.
+  source?: TimelineSource;
+  evaluable?: boolean;
+  visibility?: TimelineVisibility;
 }
 
 export interface RubricItem {

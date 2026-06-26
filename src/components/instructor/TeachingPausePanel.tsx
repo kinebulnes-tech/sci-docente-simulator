@@ -1,27 +1,21 @@
 import { useState } from "react";
 import { MessageSquare, PauseCircle, PlayCircle } from "lucide-react";
-
-interface TeachingPause {
-  id: string;
-  minute: number;
-  topic: string;
-}
+import type { InstructorEvent } from "../../types/sessionEvents";
 
 interface TeachingPausePanelProps {
+  pauses: InstructorEvent[];
   minute: number;
+  onAdd: (type: InstructorEvent["type"], content: string, minute: number, visibility: InstructorEvent["visibility"]) => void;
 }
 
-export function TeachingPausePanel({ minute }: TeachingPausePanelProps) {
-  const [pauses, setPauses]   = useState<TeachingPause[]>([]);
-  const [topic, setTopic]     = useState("");
+export function TeachingPausePanel({ pauses, minute, onAdd }: TeachingPausePanelProps) {
+  const [topic, setTopic]       = useState("");
   const [isPaused, setIsPaused] = useState(false);
 
   function registerPause() {
-    if (!topic.trim()) return;
-    setPauses((prev) => [
-      ...prev,
-      { id: `${Date.now()}`, minute, topic: topic.trim() },
-    ]);
+    const trimmed = topic.trim();
+    if (!trimmed) return;
+    onAdd("teaching_pause", trimmed, minute, "instructor_only");
     setTopic("");
     setIsPaused(true);
   }
@@ -70,8 +64,8 @@ export function TeachingPausePanel({ minute }: TeachingPausePanelProps) {
           {pauses.map((p) => (
             <div key={p.id} className="pause-entry">
               <MessageSquare size={12} />
-              <span className="log-minute">T+{p.minute}</span>
-              <span>{p.topic}</span>
+              <span className="log-minute">T+{p.minute}m</span>
+              <span>{p.content}</span>
             </div>
           ))}
         </div>

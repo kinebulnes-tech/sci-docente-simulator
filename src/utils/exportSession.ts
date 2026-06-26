@@ -1,6 +1,7 @@
 import type { SimulationState } from "../types/sci";
 import type { DecisionLog } from "../types/decisionLog";
 import type { EvaluationSummary } from "../types/evaluation";
+import type { InstructorEvent } from "../types/sessionEvents";
 import type { DebriefingData } from "./debriefing";
 import { buildDebriefingMarkdown } from "./debriefing";
 
@@ -25,10 +26,11 @@ export function buildCSVString(logs: DecisionLog[]): string {
 export function exportSessionJSON(
   state: SimulationState,
   evaluation: EvaluationSummary,
-  logs: DecisionLog[]
+  logs: DecisionLog[],
+  instructorEvents: InstructorEvent[] = []
 ): void {
   const payload = {
-    version: "1.0",
+    version: "1.1",
     exportedAt: new Date().toISOString(),
     scenario: { id: state.scenario.id, title: state.scenario.title, type: state.scenario.type },
     durationMinutes: state.minute,
@@ -41,7 +43,17 @@ export function exportSessionJSON(
     },
     decisions: state.selectedDecisions,
     timeline: state.timeline,
-    decisionLogs: logs
+    decisionLogs: logs,
+    // Fase 7: instructor events persisted separately — evaluable:false guaranteed
+    instructorEvents: instructorEvents.map((e) => ({
+      id: e.id,
+      timestamp: e.timestamp,
+      type: e.type,
+      content: e.content,
+      minute: e.minute,
+      visibility: e.visibility,
+      evaluable: false,
+    })),
   };
   downloadBlob(
     JSON.stringify(payload, null, 2),

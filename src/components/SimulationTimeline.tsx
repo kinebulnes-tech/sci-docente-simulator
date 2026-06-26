@@ -1,6 +1,10 @@
 import { useState } from "react";
-import type { TimelineEntry } from "../types/sci";
+import type { SessionRole, TimelineEntry } from "../types/sci";
 import { filterTimelineByType, getTimelineStats, sortTimelineDesc } from "../utils/timeline";
+import {
+  filterTimelineForStudent,
+  normalizeTimelineEntries,
+} from "../utils/timelineMetadata";
 
 const TYPE_LABELS: Record<TimelineEntry["type"], string> = {
   decision: "Decisión",
@@ -9,15 +13,37 @@ const TYPE_LABELS: Record<TimelineEntry["type"], string> = {
   score:    "Puntaje"
 };
 
+const SOURCE_BADGE: Record<string, string> = {
+  student:    "Alumno",
+  instructor: "Instructor",
+  system:     "Sistema",
+};
+
+const SOURCE_CSS: Record<string, string> = {
+  student:    "tl-src-student",
+  instructor: "tl-src-instructor",
+  system:     "tl-src-system",
+};
+
 interface SimulationTimelineProps {
   entries: TimelineEntry[];
+  role?: SessionRole;
 }
 
-export function SimulationTimeline({ entries }: SimulationTimelineProps) {
+export function SimulationTimeline({ entries, role = "instructor" }: SimulationTimelineProps) {
   const [filter, setFilter] = useState<TimelineEntry["type"] | "all">("all");
 
-  const filtered = filter === "all" ? entries : filterTimelineByType(entries, [filter]);
-  const sorted = sortTimelineDesc(filtered);
+  const normalized = normalizeTimelineEntries(entries);
+  // Students only see entries not marked visibility:"instructor"
+  const roleFiltered = role === "alumno"
+    ? filterTimelineForStudent(normalized)
+    : normalized;
+
+  const typeFiltered = filter === "all"
+    ? roleFiltered
+    : filterTimelineByType(roleFiltered, [filter]);
+
+  const sorted = sortTimelineDesc(typeFiltered);
   const stats = getTimelineStats(entries);
 
   return (
@@ -54,7 +80,14 @@ export function SimulationTimeline({ entries }: SimulationTimelineProps) {
               key={`${entry.minute}-${entry.title}-${i}`}
               className={`timeline-entry type-${entry.type}`}
             >
-              <span>Min {entry.minute}</span>
+              <div className="timeline-entry-header">
+                <span>Min {entry.minute}</span>
+                {role === "instructor" && entry.source && (
+                  <span className={`tl-source-badge ${SOURCE_CSS[entry.source] ?? ""}`}>
+                    {SOURCE_BADGE[entry.source] ?? entry.source}
+                  </span>
+                )}
+              </div>
               <strong>{entry.title}</strong>
               <p>{entry.detail}</p>
             </article>

@@ -1,5 +1,5 @@
 import type { DecisionLog } from "../types/decisionLog";
-import type { SessionMode } from "../types/sessionEvents";
+import type { InstructorEvent, SessionMode } from "../types/sessionEvents";
 import type { SessionRole } from "../types/sci";
 
 /**
@@ -74,4 +74,50 @@ export function shouldShowRubric(role: SessionRole, isCompleted: boolean): boole
  */
 export function isProjectorSafe(mode: SessionMode): boolean {
   return mode === "projector" || mode === "evaluation";
+}
+
+// ─── InstructorEvent visibility ────────────────────────────────────────────
+
+/** True when the event is private to the instructor. */
+export function isInstructorOnly(event: InstructorEvent): boolean {
+  return event.visibility === "instructor_only";
+}
+
+/** True when the event was explicitly shared with the student. */
+export function isStudentVisible(event: InstructorEvent): boolean {
+  return event.visibility === "student_visible" || event.visibility === "projector_visible";
+}
+
+/** True when the event is safe for class projection. */
+export function isProjectorVisible(event: InstructorEvent): boolean {
+  return event.visibility === "projector_visible";
+}
+
+/** InstructorEvents can never be evaluable — enforced here for extra safety. */
+export function filterEvaluableEvents(events: InstructorEvent[]): InstructorEvent[] {
+  // By contract InstructorEvent.evaluable is always false; return empty.
+  return events.filter((e) => (e as { evaluable: boolean }).evaluable === true);
+}
+
+/** Returns events the student is allowed to see. */
+export function filterEventsForStudent(
+  events: InstructorEvent[],
+  mode?: SessionMode
+): InstructorEvent[] {
+  // In teaching mode, student_visible events are intentionally shared;
+  // in all other modes the same filter applies (only student_visible and
+  // projector_visible are shown). The mode param is accepted for future
+  // per-mode refinements and to match the FireBase-ready API surface.
+  void mode;
+  return events.filter(isStudentVisible);
+}
+
+/** Instructor sees everything. */
+export function filterEventsForInstructor(events: InstructorEvent[]): InstructorEvent[] {
+  return events;
+}
+
+/** Projector sees only projector_visible events. */
+export function filterEventsForProjector(events: InstructorEvent[]): InstructorEvent[] {
+  return events.filter(isProjectorVisible);
 }

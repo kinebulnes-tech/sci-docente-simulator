@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { SessionRole, SimulationState } from "../types/sci";
 import type { EvaluationSummary } from "../types/evaluation";
+import type { InstructorEvent } from "../types/sessionEvents";
 import type { DecisionLog } from "../types/decisionLog";
 import type { DebriefingData } from "../utils/debriefing";
 import { buildDebriefingMarkdown } from "../utils/debriefing";
@@ -30,6 +31,7 @@ interface DebriefingPanelProps {
   debriefing: DebriefingData;
   logs: DecisionLog[];
   role: SessionRole;
+  instructorEvents?: InstructorEvent[];
   onRestart: () => void;
   onExit: () => void;
 }
@@ -51,6 +53,7 @@ export function DebriefingPanel({
   debriefing,
   logs,
   role,
+  instructorEvents = [],
   onRestart,
   onExit,
 }: DebriefingPanelProps) {
@@ -140,6 +143,7 @@ export function DebriefingPanel({
               debriefing={debriefing}
               logs={logs}
               instructorNotes={notes}
+              instructorEvents={isInstructor ? instructorEvents : []}
             />
           </>
         )}
@@ -200,6 +204,20 @@ export function DebriefingPanel({
                   </ul>
                 </div>
               ))}
+
+              {isInstructor && instructorEvents.length > 0 && (
+                <div className="aar-section aar-section--instructor">
+                  <h3 className="aar-section-title">7. Observaciones docentes</h3>
+                  <ul className="aar-section-list">
+                    {instructorEvents.map((e) => (
+                      <li key={e.id}>
+                        <span className="aar-event-type">[{e.type}]</span>{" "}
+                        T+{e.minute ?? "?"}m — {e.content.replace(/^\[(good|warn|critical)\]\s*/, "")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </section>
         )}

@@ -70,9 +70,9 @@ export function AppHeader({
         <div className={`status-pill status-${status}`}>{STATUS_LABEL[status]}</div>
 
         {showScore && (
-          <div className="score-pill">
+          <div className="score-pill" title="Desempeño estimado en vivo (Rúbrica del escenario)">
             <span>{globalScore}%</span>
-            <small>{scoreLabel(globalScore)}</small>
+            <small>Est. · {scoreLabel(globalScore)}</small>
           </div>
         )}
 
