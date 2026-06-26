@@ -7,6 +7,11 @@ import { DecisionPanel } from "./components/DecisionPanel";
 import { DoctrinePanel } from "./components/DoctrinePanel";
 import { FeedbackToast } from "./components/FeedbackToast";
 import { IcsFormViewer } from "./components/IcsFormViewer";
+import { GuidedQuestionPanel } from "./components/instructor/GuidedQuestionPanel";
+import { InstructorModePanel } from "./components/instructor/InstructorModePanel";
+import { InstructorNotesPanel } from "./components/instructor/InstructorNotesPanel";
+import { LivePerformancePanel } from "./components/instructor/LivePerformancePanel";
+import { TeachingPausePanel } from "./components/instructor/TeachingPausePanel";
 import { InstructorPanel } from "./components/InstructorPanel";
 import { MetricGrid } from "./components/MetricGrid";
 import { ObjectivePanel } from "./components/ObjectivePanel";
@@ -18,6 +23,7 @@ import { ScenarioSelector } from "./components/ScenarioSelector";
 import { SimulationTimeline } from "./components/SimulationTimeline";
 import { useSimulation } from "./hooks/useSimulation";
 import { scenarioMap, scenarios } from "./data/scenarios";
+import type { InstructorMode } from "./components/instructor/InstructorModePanel";
 import type { SessionConfig } from "./types/sci";
 
 // ─── Simulation screen ─────────────────────────────────────────────────────
@@ -36,10 +42,13 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
     decisionLogs, evaluationSummary, debriefingData
   } = useSimulation(config);
 
-  const [showDebriefing, setShowDebriefing] = useState(false);
-  const isInstructor = role === "instructor";
+  const [showDebriefing, setShowDebriefing]     = useState(false);
+  const [instructorMode, setInstructorMode]     = useState<InstructorMode>("full");
 
-  // Auto-show debriefing when instructor marks complete
+  const isInstructor  = role === "instructor";
+  const isTeaching    = isInstructor && instructorMode === "teaching";
+  const isEvaluation  = isInstructor && instructorMode === "evaluation";
+
   useEffect(() => {
     if (isCompleted) setShowDebriefing(true);
   }, [isCompleted]);
@@ -63,7 +72,16 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
   }
 
   return (
-    <main className={`app-shell${projector ? " projector-mode" : ""}`}>
+    <main
+      className={[
+        "app-shell",
+        projector ? "projector-mode" : "",
+        isTeaching ? "teaching-mode" : "",
+        isEvaluation ? "evaluation-mode" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <AppHeader
         title={state.scenario.title}
         minute={state.minute}
@@ -106,7 +124,18 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
         </div>
 
         <div className="right-stack">
-          {isInstructor && <InstructorPanel state={state} dispatch={dispatch} />}
+          {isInstructor && (
+            <InstructorModePanel
+              mode={instructorMode}
+              onModeChange={setInstructorMode}
+            />
+          )}
+          {isInstructor && (
+            <LivePerformancePanel state={state} globalScore={globalScore} />
+          )}
+          {isInstructor && !isEvaluation && (
+            <InstructorPanel state={state} dispatch={dispatch} />
+          )}
           <ResourcePanel resources={state.resources} />
 
           {isInstructor || isCompleted ? (
@@ -135,6 +164,26 @@ function SimulationScreen({ config, onExit, projector, onToggleProjector }: Simu
       {isInstructor && <DecisionLogPanel logs={decisionLogs} />}
       {isInstructor && <IcsFormViewer state={state} />}
 
+      {/* ── Teaching mode tools ─────────────────────────────────── */}
+      {isTeaching && (
+        <div className="teaching-tools-grid">
+          <GuidedQuestionPanel
+            learningObjectives={state.scenario.learningObjectives}
+            scenarioTitle={state.scenario.title}
+          />
+          <section className="panel">
+            <div className="panel-heading">
+              <p className="eyebrow">Herramientas docentes</p>
+              <h2>Notas y pausas</h2>
+            </div>
+            <TeachingPausePanel minute={state.minute} />
+            <div style={{ marginTop: 16 }}>
+              <InstructorNotesPanel />
+            </div>
+          </section>
+        </div>
+      )}
+
       <FeedbackToast feedback={feedback} onClose={clearFeedback} />
     </main>
   );
@@ -147,24 +196,16 @@ export default function App() {
   const [activeConfig, setActiveConfig]   = useState<SessionConfig | null>(null);
   const [projector, setProjector]         = useState(false);
 
-  const handleStart = useCallback((cfg: SessionConfig) => setPendingConfig(cfg), []);
-
+  const handleStart    = useCallback((cfg: SessionConfig) => setPendingConfig(cfg), []);
   const handleBeginSim = useCallback(() => {
     if (!pendingConfig) return;
     setActiveConfig(pendingConfig);
     setPendingConfig(null);
   }, [pendingConfig]);
-
-  const handleExit = useCallback(() => {
-    setActiveConfig(null);
-    setPendingConfig(null);
-  }, []);
-
-  const handleBack = useCallback(() => setPendingConfig(null), []);
-
+  const handleExit  = useCallback(() => { setActiveConfig(null); setPendingConfig(null); }, []);
+  const handleBack  = useCallback(() => setPendingConfig(null), []);
   const toggleProjector = useCallback(() => setProjector((p) => !p), []);
 
-  // Fullscreen
   useEffect(() => {
     const handler = () => {};
     document.addEventListener("fullscreenchange", handler);

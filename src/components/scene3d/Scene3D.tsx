@@ -59,8 +59,9 @@ export function Scene3D({
           hasCommand={hasCommand}
           hasPerimeter={hasPerimeter}
           animated={animated}
+          showLabels={showLabels}
         />
-        <SceneResources resources={resources} animated={animated} />
+        <SceneResources resources={resources} animated={animated} showBadges={showLabels} />
         {showLabels && <SceneLabels hotspots={scenario.hotspots} />}
       </Canvas>
     </div>

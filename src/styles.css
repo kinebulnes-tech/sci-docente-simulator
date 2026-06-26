@@ -1667,3 +1667,231 @@ p {
   color: #3b0764;
   background: #f3e8ff;
 }
+
+/* ─── Instructor Mode Panel ──────────────────────────────────────────────── */
+.instructor-mode-panel { padding: 14px; }
+.instructor-modes {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.instructor-mode-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--surface);
+  font-size: 0.78rem; font-weight: 500; color: var(--text-soft);
+  cursor: pointer; transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.instructor-mode-btn:hover { border-color: var(--blue); color: var(--blue); }
+.instructor-mode-btn.active {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+}
+.instructor-mode-hint {
+  font-size: 0.78rem; color: var(--text-soft); margin: 0; font-style: italic;
+}
+
+/* ─── Live Performance Panel ─────────────────────────────────────────────── */
+.live-performance-panel { padding: 14px; }
+.perf-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px;
+}
+.perf-card {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 4px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface-strong); color: var(--text-soft);
+}
+.perf-card.perf-good { border-color: rgba(47,125,75,0.4); color: var(--green); }
+.perf-card.perf-warn { border-color: rgba(196,129,24,0.4); color: var(--amber); }
+.perf-card.perf-bad  { border-color: rgba(196,56,45,0.4);  color: var(--red); }
+.perf-value { font-size: 1rem; font-weight: 700; line-height: 1; }
+.perf-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.perf-pending {
+  background: rgba(196,129,24,0.07); border: 1px solid rgba(196,129,24,0.25);
+  border-radius: 6px; padding: 8px 10px;
+}
+.perf-pending-label {
+  font-size: 0.75rem; font-weight: 600; color: var(--amber); margin: 0 0 4px;
+}
+.perf-pending-list {
+  margin: 0; padding-left: 14px; font-size: 0.78rem; color: var(--text-soft);
+}
+.perf-pending-list li { margin-bottom: 2px; }
+.perf-cat {
+  margin-left: 4px; font-size: 0.7rem; color: var(--text-soft);
+}
+.perf-more { font-style: italic; color: var(--text-soft); }
+
+/* ─── Instructor Notes Panel ─────────────────────────────────────────────── */
+.instructor-notes-panel { display: flex; flex-direction: column; gap: 8px; }
+.notes-input-row {
+  display: flex; gap: 6px; align-items: center;
+}
+.notes-type-btns {
+  display: flex; gap: 4px;
+}
+.note-type-btn {
+  padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--surface); cursor: pointer; line-height: 1;
+  transition: background 0.1s, border-color 0.1s;
+}
+.note-type-btn.note-type-good.active   { background: #dcfce7; border-color: #4ade80; }
+.note-type-btn.note-type-warn.active   { background: #fef9c3; border-color: #facc15; }
+.note-type-btn.note-type-critical.active { background: #fee2e2; border-color: #f87171; }
+.notes-text-input {
+  flex: 1; border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 10px; font: inherit; font-size: 0.84rem; color: var(--ink);
+  min-width: 0;
+}
+.notes-text-input:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+.notes-list {
+  display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto;
+}
+.note-item {
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 5px 8px; border-radius: 5px; font-size: 0.82rem;
+}
+.note-item.note-good     { background: #f0fdf4; color: #166534; }
+.note-item.note-warn     { background: #fefce8; color: #854d0e; }
+.note-item.note-critical { background: #fef2f2; color: #991b1b; }
+
+/* ─── Teaching Pause Panel ───────────────────────────────────────────────── */
+.teaching-pause-panel { display: flex; flex-direction: column; gap: 8px; }
+.pause-active {
+  padding: 10px; background: #fef9c3; border: 1px solid #facc15;
+  border-radius: 6px; display: flex; flex-direction: column; gap: 6px;
+}
+.pause-active-label { font-size: 0.82rem; font-weight: 600; color: #854d0e; margin: 0; }
+.pause-form { display: flex; gap: 6px; }
+.pause-history {
+  display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto;
+}
+.pause-entry {
+  display: flex; gap: 6px; align-items: flex-start;
+  font-size: 0.78rem; color: var(--text-soft); padding: 3px 0;
+}
+
+/* ─── Guided Question Panel ──────────────────────────────────────────────── */
+.guided-question-panel { }
+.question-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.question-item {
+  display: flex; align-items: flex-start; gap: 8px; text-align: left;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); cursor: pointer; font-size: 0.84rem;
+  color: var(--text-soft); transition: background 0.1s, border-color 0.1s;
+}
+.question-item:hover { border-color: var(--blue); color: var(--blue); }
+.question-item.discussed {
+  background: #f0fdf4; border-color: #86efac; color: #166534; text-decoration: line-through;
+}
+.question-item span { flex: 1; line-height: 1.4; }
+
+/* ─── Teaching tools grid ────────────────────────────────────────────────── */
+.teaching-tools-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .teaching-tools-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Decision Panel enhancements ────────────────────────────────────────── */
+.decision-filter-bar {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.decision-filter-btn {
+  padding: 3px 10px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--surface); font-size: 0.75rem; font-weight: 500;
+  color: var(--text-soft); cursor: pointer; transition: background 0.1s, color 0.1s;
+}
+.decision-filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+.decision-filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+.decision-pending-hint {
+  font-size: 0.76rem; color: var(--amber); margin: 2px 0 0; font-weight: 500;
+}
+.decision-title-icons { display: flex; gap: 4px; align-items: center; }
+.decision-empty { font-size: 0.84rem; color: var(--text-soft); padding: 8px 0; }
+.decision-cat-badge {
+  display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 0.7rem;
+  font-weight: 600; background: var(--surface-strong); color: var(--text-soft);
+}
+.decision-registered-tag {
+  font-size: 0.7rem; color: var(--green); font-weight: 600;
+}
+.decision-recommended-tag {
+  font-size: 0.7rem; color: var(--amber); font-weight: 600;
+}
+.decision-timing-tag { font-size: 0.75rem; color: var(--text-soft); }
+
+/* ─── Debriefing tab bar ─────────────────────────────────────────────────── */
+.debrief-tab-bar {
+  display: flex; gap: 6px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px; flex-wrap: wrap;
+}
+.debrief-tab-btn {
+  padding: 6px 14px; border: 1px solid transparent; border-radius: 6px;
+  background: transparent; font-size: 0.84rem; font-weight: 500;
+  color: var(--text-soft); cursor: pointer; transition: background 0.1s, color 0.1s;
+}
+.debrief-tab-btn:hover { background: var(--surface-strong); color: var(--ink); }
+.debrief-tab-btn.active {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+}
+
+/* ─── AAR Panel ──────────────────────────────────────────────────────────── */
+.aar-panel .panel-heading { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+.aar-copy-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.aar-copy-btns .icon-button {
+  width: auto; padding: 5px 10px; gap: 5px; display: inline-flex;
+  font-size: 0.78rem;
+}
+.aar-sections {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;
+}
+@media (max-width: 700px) {
+  .aar-sections { grid-template-columns: 1fr; }
+}
+.aar-section {
+  background: var(--surface-strong); border: 1px solid var(--line);
+  border-radius: 6px; padding: 10px 12px;
+}
+.aar-section-title {
+  font-size: 0.82rem; font-weight: 700; color: var(--navy);
+  margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.aar-section-list {
+  margin: 0; padding-left: 16px; font-size: 0.82rem; color: var(--text-soft);
+  display: flex; flex-direction: column; gap: 3px;
+}
+
+/* ─── 3D Hotspot interactive label ───────────────────────────────────────── */
+.hotspot-label-3d {
+  background: rgba(16, 42, 67, 0.92);
+  border: 1.5px solid;
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-width: 140px;
+  max-width: 220px;
+  pointer-events: none;
+  user-select: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.hotspot-label-kind {
+  display: block; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px;
+}
+.hotspot-label-name {
+  display: block; color: #fff; font-size: 11px; margin-bottom: 3px;
+}
+.hotspot-label-desc {
+  color: rgba(255,255,255,0.7); font-size: 10px; line-height: 1.35;
+  margin: 0;
+}
+
+/* ─── 3D Resource status badge ───────────────────────────────────────────── */
+.resource-status-badge-3d {
+  display: inline-block;
+  padding: 1px 5px; border-radius: 3px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+  color: #fff; pointer-events: none; user-select: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  white-space: nowrap;
+}
