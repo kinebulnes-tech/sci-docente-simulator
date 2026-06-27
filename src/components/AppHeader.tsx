@@ -1,5 +1,5 @@
 import type { Dispatch } from "react";
-import { CheckCircle2, LogOut, Maximize2, Monitor, RotateCcw, TimerReset } from "lucide-react";
+import { CheckCircle2, Focus, LayoutGrid, LogOut, Maximize2, Monitor, RotateCcw, TimerReset } from "lucide-react";
 import type { IncidentStatus, SessionRole, SimulationAction } from "../types/sci";
 import { scoreLabel } from "../utils/number";
 
@@ -17,6 +17,8 @@ interface AppHeaderProps {
   projector?: boolean;
   onToggleProjector?: () => void;
   showScore?: boolean;
+  immersive?: boolean;
+  onToggleImmersive?: () => void;
 }
 
 const STATUS_LABEL: Record<IncidentStatus, string> = {
@@ -44,7 +46,9 @@ export function AppHeader({
   onExit,
   projector = false,
   onToggleProjector,
-  showScore = true
+  showScore = true,
+  immersive = false,
+  onToggleImmersive,
 }: AppHeaderProps) {
   function handleReset() {
     if (!window.confirm("¿Reiniciar la simulación? Se perderá el progreso guardado.")) return;
@@ -94,6 +98,16 @@ export function AppHeader({
         <button className="icon-button" title="Reiniciar simulación" onClick={handleReset}>
           <RotateCcw size={18} />
         </button>
+
+        {onToggleImmersive && (
+          <button
+            className={`icon-button${immersive ? " active-btn" : ""}`}
+            title={immersive ? "Vista normal" : "Modo inmersivo — escena 3D protagonista"}
+            onClick={onToggleImmersive}
+          >
+            {immersive ? <LayoutGrid size={18} /> : <Focus size={18} />}
+          </button>
+        )}
 
         {onToggleProjector && (
           <button

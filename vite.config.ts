@@ -11,8 +11,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "vendor-three": ["three"],
-          "vendor-r3f":   ["@react-three/fiber", "@react-three/drei"],
+          "vendor-three":    ["three"],
+          "vendor-r3f":      ["@react-three/fiber", "@react-three/drei"],
+          "vendor-firebase": [
+            "firebase/app",
+            "firebase/auth",
+            "firebase/firestore",
+          ],
         }
       }
     }
