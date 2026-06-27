@@ -11,6 +11,9 @@ interface SceneHotspotsProps {
   hasPerimeter: boolean;
   animated?: boolean;
   showLabels?: boolean;
+  fireIntensity?: number;
+  smokeIntensity?: number;
+  hasExposureLine?: boolean;
 }
 
 const CRITICAL_KINDS = new Set(["fuego", "victima"]);
@@ -32,7 +35,7 @@ function StaticPin({ kind, position }: { kind: string; position: [number, number
   );
 }
 
-export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = true, showLabels = false }: SceneHotspotsProps) {
+export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = true, showLabels = false, fireIntensity = 1, smokeIntensity = 1, hasExposureLine = false }: SceneHotspotsProps) {
   return (
     <>
       {hasPerimeter && (
@@ -50,6 +53,12 @@ export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = t
         const anim = hotspotAnimationType(h.kind);
         const isCritical = CRITICAL_KINDS.has(h.kind);
 
+        // Exposure-side riesgo gets lower intensity when linea-exposicion is taken
+        const isExposure = h.kind === "riesgo";
+        const effectiveIntensity = isExposure && hasExposureLine
+          ? Math.max(0.3, fireIntensity * 0.45)
+          : fireIntensity;
+
         return (
           <group key={h.id}>
             {isCritical && (
@@ -58,7 +67,7 @@ export function SceneHotspots({ hotspots, hasCommand, hasPerimeter, animated = t
             {isCritical && (
               <PriorityRing position={pos} color={color} animated={animated} />
             )}
-            {anim === "fire"  && <FireHotspot  id={h.id} kind={h.kind} position={pos} animated={animated} />}
+            {anim === "fire"  && <FireHotspot  id={h.id} kind={h.kind} position={pos} animated={animated} intensity={effectiveIntensity} smokeIntensity={smokeIntensity} />}
             {anim === "pulse" && <PulseHotspot id={h.id} kind={h.kind} position={pos} animated={animated} />}
             {anim === "none"  && <StaticPin kind={h.kind} position={pos} />}
             {showLabels && <HotspotLabel3D hotspot={h} />}

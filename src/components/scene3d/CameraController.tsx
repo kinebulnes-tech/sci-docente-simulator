@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { OrthographicCamera } from "three";
 import { getCameraPreset } from "../../utils/cameraPresets";
@@ -9,15 +10,18 @@ import { recommendedZoom } from "../../utils/scene3d";
 interface CameraControllerProps {
   resetSignal: number;
   preset?: string;
+  /** When set, camera target lerps toward this world-space point over ~3 s. */
+  focusPoint?: [number, number, number] | null;
 }
 
 /**
  * Manages OrbitControls + responsive zoom + camera presets.
  * Must live inside <Canvas> to access useThree().
  */
-export function CameraController({ resetSignal, preset = "general" }: CameraControllerProps) {
+export function CameraController({ resetSignal, preset = "general", focusPoint = null }: CameraControllerProps) {
   const { camera, size } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
+  const focusVec = useRef(new Vector3());
 
   useEffect(() => {
     const ortho = camera as OrthographicCamera;
@@ -44,6 +48,14 @@ export function CameraController({ resetSignal, preset = "general" }: CameraCont
     ortho.updateProjectionMatrix();
     controlsRef.current?.reset();
   }, [resetSignal, camera, size.width, size.height]);
+
+  // Smooth pan toward inject focus point
+  useFrame(() => {
+    if (!focusPoint || !controlsRef.current) return;
+    focusVec.current.set(...focusPoint);
+    controlsRef.current.target.lerp(focusVec.current, 0.035);
+    controlsRef.current.update();
+  });
 
   return (
     <OrbitControls

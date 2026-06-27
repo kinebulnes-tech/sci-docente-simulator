@@ -577,12 +577,21 @@ p {
   .bottom-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Prevent grid children from overflowing their 1fr column on narrow screens */
+  .left-stack,
+  .center-stack,
+  .right-stack {
+    min-width: 0;
+    overflow-x: hidden;
+  }
 }
 
 @media (max-width: 720px) {
   .app-shell {
     width: min(100% - 20px, 1680px);
     padding-top: 10px;
+    overflow-x: hidden;
   }
 
   .app-header,
@@ -603,6 +612,77 @@ p {
 
   .map-canvas {
     min-height: 260px;
+  }
+}
+
+/* ─── Immersive mode — scene takes 65%, controls sidebar 35% ─────────────── */
+
+@media (min-width: 1181px) {
+  .app-shell.immersive .briefing-band {
+    display: none;
+  }
+
+  .app-shell.immersive .metric-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-bottom: 10px;
+  }
+
+  /* 2-column layout: scene | sidebar */
+  .app-shell.immersive .main-grid {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+    align-items: start;
+  }
+
+  /* Left column spans both rows */
+  .app-shell.immersive .left-stack {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+
+  /* Right column: decisions on top, panels below */
+  .app-shell.immersive .center-stack {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .app-shell.immersive .right-stack {
+    grid-column: 2;
+    grid-row: 2;
+    max-height: 70vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  /* Hide non-scene panels in left column */
+  .app-shell.immersive .left-stack > .panel {
+    display: none;
+  }
+
+  /* Scene canvas fills left column height */
+  .app-shell.immersive .scene3d-canvas {
+    aspect-ratio: unset;
+    height: calc(100vh - 170px);
+    min-height: 520px;
+  }
+
+  /* Scene board itself: no padding waste */
+  .app-shell.immersive .scenario-board {
+    padding: 10px;
+  }
+
+  /* Compact board toolbar in immersive */
+  .app-shell.immersive .board-toolbar {
+    margin-bottom: 6px;
+  }
+
+  .app-shell.immersive .board-toolbar h2 {
+    font-size: 1rem;
+  }
+
+  /* Bottom grid collapses to single column in immersive */
+  .app-shell.immersive .bottom-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1404,6 +1484,170 @@ p {
   font-size: 0.9rem;
 }
 
+/* ─── Scene HUD overlay ──────────────────────────────────────────────────── */
+
+.scene-hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hud-body {
+  background: rgba(13, 20, 36, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 165px;
+  font-family: inherit;
+}
+
+@supports (backdrop-filter: blur(6px)) {
+  .hud-body {
+    backdrop-filter: blur(6px);
+    background: rgba(13, 20, 36, 0.72);
+  }
+}
+
+.hud-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.hud-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-label {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.hud-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hud-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.55s ease, background 0.35s;
+}
+
+.hud-value {
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 22px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.35s;
+}
+
+.hud-status-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 5px currentColor;
+}
+
+.hud-status-text {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  flex: 1;
+}
+
+.hud-minute {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 9px;
+}
+
+.hud-minute strong {
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-alert {
+  margin-top: 6px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  animation: hud-alert-in 0.22s ease-out;
+}
+
+.hud-alert-warn {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.38);
+}
+
+.hud-alert-ok {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.32);
+}
+
+/* Microanimation — bars brighten briefly when metrics change */
+.hud-pulsing .hud-bar-fill {
+  animation: hud-bar-pulse 0.6s ease-out;
+}
+
+.hud-pulsing .hud-value {
+  animation: hud-value-pop 0.5s ease-out;
+}
+
+@keyframes hud-alert-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hud-bar-pulse {
+  0%   { filter: brightness(1); }
+  40%  { filter: brightness(1.8); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes hud-value-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* Mobile: tighter HUD */
+@media (max-width: 640px) {
+  .scene-hud { top: 6px; left: 6px; }
+  .hud-body  { padding: 5px 7px; min-width: 140px; }
+  .hud-label { width: 44px; font-size: 8px; }
+  .hud-value { font-size: 9px; }
+}
+
 /* ═══════════════════════════════════════════════════════════
    FASE 5 — Producto docente
    ═══════════════════════════════════════════════════════════ */
@@ -1587,6 +1831,25 @@ p {
   user-select: none;
   line-height: 1.4;
 }
+
+/* Sector / inject / team labels */
+.sector-label {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+}
+.sector-label-interior { background: rgba(239,68,68,0.82); color: #fca5a5; border-color: #ef4444; }
+.sector-label-exposure  { background: rgba(249,115,22,0.82); color: #fdba74; border-color: #f97316; }
+.sector-label-safety    { background: rgba(34,197,94,0.82);  color: #86efac; border-color: #22c55e; }
+.sector-label-danger    { background: rgba(239,68,68,0.9);   color: #fff;    border-color: #fca5a5; }
+.sector-label-search    { background: rgba(251,191,36,0.85); color: #1e1e1e; border-color: #fbbf24; }
 
 /* ─── Scene 3D controls toolbar ─────────────────────────────────────────── */
 .scene3d-controls {

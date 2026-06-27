@@ -63,6 +63,7 @@ function SimulationScreen({
 
   const [showDebriefing, setShowDebriefing] = useState(false);
   const [instructorMode, setInstructorMode] = useState<InstructorMode>("full");
+  const [immersive, setImmersive] = useState(false);
 
   const { events: instructorEvents, notes, pauses, add: addInstructorEvent, remove: removeInstructorEvent, clear: clearInstructorEventsFn } = useInstructorEvents(config.scenarioId);
 
@@ -107,9 +108,10 @@ function SimulationScreen({
     <main
       className={[
         "app-shell",
-        projector ? "projector-mode" : "",
-        isTeaching ? "teaching-mode" : "",
-        isEvaluation ? "evaluation-mode" : "",
+        projector   ? "projector-mode"   : "",
+        isTeaching  ? "teaching-mode"    : "",
+        isEvaluation? "evaluation-mode"  : "",
+        immersive   ? "immersive"        : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -128,6 +130,8 @@ function SimulationScreen({
         projector={projector}
         onToggleProjector={onToggleProjector}
         showScore={shouldShowLiveScore(role, isCompleted)}
+        immersive={immersive}
+        onToggleImmersive={() => setImmersive((v) => !v)}
       />
 
       <section className="briefing-band">
@@ -142,7 +146,7 @@ function SimulationScreen({
 
       <div className="main-grid">
         <div className="left-stack">
-          <ScenarioBoard state={state} />
+          <ScenarioBoard state={state} immersive={immersive} />
           <ObjectivePanel state={state} />
           <OrgChart
             activeRoles={state.activeRoles}
